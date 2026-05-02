@@ -5,6 +5,9 @@
 (function referralModule() {
   const STORAGE_KEY = "rtx_pending_ref_v1";
 
+  /** Default share target (GitHub Pages). Override: set window.RTX_PUBLIC_BASE_URL before scripts load. */
+  const DEFAULT_PUBLIC_BASE = "https://reddnbre.github.io/RevTrafficXchange/";
+
   function sanitizeHandle(raw) {
     return String(raw || "")
       .trim()
@@ -46,22 +49,24 @@
   }
 
   /**
-   * Shareable landing URL for the current origin/path (directory of index.html when applicable).
+   * Shareable landing URL for recruits (canonical public site + ?ref=).
+   * Uses RTX_PUBLIC_BASE_URL if set, else the GitHub Pages deployment URL (not file:// or localhost).
    */
   function buildLandingUrlForRef(username) {
     const u = sanitizeHandle(username);
     if (!isValidHandle(u)) return "";
+    const rawBase =
+      typeof window !== "undefined" && window.RTX_PUBLIC_BASE_URL
+        ? String(window.RTX_PUBLIC_BASE_URL).trim()
+        : DEFAULT_PUBLIC_BASE;
+    let base = rawBase.replace(/\/?$/, "/");
+    if (!/^https?:\/\//i.test(base)) {
+      base = DEFAULT_PUBLIC_BASE;
+    }
     try {
-      const url = new URL(window.location.href);
+      const url = new URL(base);
       url.hash = "";
       url.search = "";
-      let path = url.pathname;
-      if (/[^/]+\.html$/i.test(path)) {
-        url.pathname = path.replace(/[^/]+\.html$/i, "");
-      }
-      if (!url.pathname.endsWith("/")) {
-        url.pathname += "/";
-      }
       url.searchParams.set("ref", u);
       return url.toString();
     } catch (e) {

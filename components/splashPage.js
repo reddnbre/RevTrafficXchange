@@ -19,7 +19,10 @@ function SplashPageComponent() {
               <span class="splash-brand-sub">REVTRAFFICXCHANGE</span>
             </div>
           </div>
-          <button type="button" class="splash-login-link" onclick="App.openPreLogin()">Already a member? <span class="splash-login-em">LOGIN</span></button>
+          <div class="splash-header-auth">
+            <span class="splash-already">Already a member?</span>
+            <button type="button" class="splash-nav-login" onclick="App.openPreLogin()">LOGIN</button>
+          </div>
         </div>
       </header>
 
@@ -43,50 +46,82 @@ function SplashPageComponent() {
                 <img src="assets/images/logos/rx-icon.png" alt="" class="splash-orbit-logo" width="72" height="72" />
               </div>
               <span class="splash-hex splash-hex-1">SURF ADS</span>
-              <span class="splash-hex splash-hex-2">EARN CREDITS</span>
-              <span class="splash-hex splash-hex-3">PLAY GAMES</span>
-              <span class="splash-hex splash-hex-4">BUILD LOYALTY</span>
-              <span class="splash-hex splash-hex-5">UNLOCK REWARDS</span>
+              <span class="splash-hex splash-hex-2">PLAY GAMES</span>
+              <span class="splash-hex splash-hex-3">BUILD LOYALTY</span>
+              <span class="splash-hex splash-hex-4">UNLOCK REWARDS</span>
+              <span class="splash-hex splash-hex-5">EARN CREDITS</span>
               <span class="splash-hex splash-hex-6">HYPER SPIN</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="splash-section">
-        <h2 class="splash-section-title">What you can do</h2>
-        <div class="splash-feature-grid">
-          <article class="splash-card"><h3>VIEW ADS</h3><p>Earn traffic credits by viewing member campaigns.</p></article>
-          <article class="splash-card"><h3>COMPLETE SESSIONS</h3><p>Surf 25 pages to complete a session and unlock Hyper Spin.</p></article>
-          <article class="splash-card"><h3>PLAY MINI-GAMES</h3><p>Random mini-games can appear while surfing with bonus opportunities.</p></article>
-          <article class="splash-card"><h3>BUILD LOYALTY</h3><p>Increase your Loyalty Score and climb tiers as you stay active.</p></article>
-          <article class="splash-card"><h3>PROMOTE YOUR LINKS</h3><p>Add sites, text ads, and banner ads to get exposure.</p></article>
-          <article class="splash-card"><h3>SPOTLIGHT BOOKING</h3><p>Use Premium RevCoins to book premium 24-hour Spotlight exposure.</p></article>
+      <section class="splash-section splash-section-features">
+        <h2 class="splash-section-title">WHAT YOU CAN DO</h2>
+        <div class="splash-feature-row">
+          <article class="splash-card splash-card-feature">
+            <div class="splash-card-icon" aria-hidden="true">&#128065;</div>
+            <h3>VIEW ADS</h3>
+            <p>Earn traffic credits by viewing member campaigns.</p>
+          </article>
+          <article class="splash-card splash-card-feature">
+            <div class="splash-card-icon" aria-hidden="true">&#10003;</div>
+            <h3>COMPLETE SESSIONS</h3>
+            <p>Surf 25 pages to complete a session and unlock Hyper Spin.</p>
+          </article>
+          <article class="splash-card splash-card-feature">
+            <div class="splash-card-icon" aria-hidden="true">&#127918;</div>
+            <h3>PLAY MINI-GAMES</h3>
+            <p>Random mini-games can appear while surfing with bonus opportunities.</p>
+          </article>
+          <article class="splash-card splash-card-feature">
+            <div class="splash-card-icon" aria-hidden="true">&#127942;</div>
+            <h3>BUILD LOYALTY</h3>
+            <p>Increase your Loyalty Score and climb tiers as you stay active.</p>
+          </article>
+          <article class="splash-card splash-card-feature">
+            <div class="splash-card-icon" aria-hidden="true">&#128279;</div>
+            <h3>PROMOTE YOUR LINKS</h3>
+            <p>Add sites, text ads, and banner ads to get exposure.</p>
+          </article>
+          <article class="splash-card splash-card-feature">
+            <div class="splash-card-icon" aria-hidden="true">&#128081;</div>
+            <h3>SPOTLIGHT BOOKING</h3>
+            <p>Use Premium RevCoins to book premium 24-hour Spotlight exposure.</p>
+          </article>
         </div>
       </section>
 
       <section class="splash-triple">
         <div class="splash-column splash-column-rules">
           <h3 class="splash-column-title">How it works</h3>
-          <ol class="splash-num-list">
-            <li>Create your free account.</li>
-            <li>Surf ads and earn traffic credits.</li>
-            <li>Complete sessions, play games, and build daily activity.</li>
-            <li>Use credits, Premium RevCoins, and upgrades to grow your reach.</li>
+          <ol class="splash-steps">
+            <li><span class="splash-step-marker" aria-hidden="true">1</span> Create your free account.</li>
+            <li><span class="splash-step-marker" aria-hidden="true">2</span> Surf ads and earn traffic credits.</li>
+            <li><span class="splash-step-marker" aria-hidden="true">3</span> Complete sessions, play games, and build daily activity.</li>
+            <li><span class="splash-step-marker" aria-hidden="true">4</span> Use credits, Premium RevCoins, and upgrades to grow your reach.</li>
           </ol>
         </div>
         <div class="splash-column splash-column-pool">
           <h3 class="splash-column-title">Loyalty reward pool</h3>
-          <p class="splash-pool-copy">
-            Activity-based rewards tied to pool health and platform rules. Caps and eligibility apply—
-            <strong>up to 150% maximum reward cap</strong> references combined conditions, not a guarantee of payout.
-          </p>
+          <div class="splash-pool-scene" aria-hidden="true">
+            <div class="splash-pool-coin"><span class="splash-pool-dollar">$</span></div>
+            <div class="splash-pool-surface"></div>
+            <div class="splash-pool-glow"></div>
+          </div>
+          <p class="splash-pool-cap">Up to 150% maximum reward cap based on activity and pool availability.</p>
+          <p class="splash-pool-disclaimer">This is not an investment, passive income program, or guaranteed earnings system.</p>
         </div>
         <div class="splash-column splash-column-coins">
           <h3 class="splash-column-title">Premium RevCoins</h3>
-          <p class="splash-coins-copy">
-            Buy Hyper Spins, activate activity boosts, boost traffic visibility, book Spotlight exposure, and unlock future features.
-          </p>
+          <div class="splash-revcoin-visual" aria-hidden="true"><span class="splash-revcoin-r">R</span></div>
+          <ul class="splash-check-list">
+            <li>Buy extra Hyper Spins</li>
+            <li>Activate activity boosts</li>
+            <li>Boost traffic visibility</li>
+            <li>Book Spotlight exposure</li>
+            <li>Unlock future premium features</li>
+          </ul>
         </div>
       </section>
 
@@ -104,25 +139,28 @@ function SplashPageComponent() {
           <div class="splash-footer-links">
             <div>
               <div class="splash-footer-col-title">Company</div>
-              <span class="splash-footer-fake">About Us</span>
-              <span class="splash-footer-fake">Terms</span>
-              <span class="splash-footer-fake">Privacy</span>
+              <span class="splash-footer-line">About Us</span>
+              <button type="button" class="splash-footer-line splash-footer-action" onclick="App.openPreLogin()">Terms &amp; Rewards Disclaimer</button>
+              <span class="splash-footer-line">Privacy Policy</span>
             </div>
             <div>
               <div class="splash-footer-col-title">Resources</div>
-              <span class="splash-footer-fake">How It Works</span>
-              <span class="splash-footer-fake">Knowledge Base</span>
-              <span class="splash-footer-fake">Support</span>
+              <span class="splash-footer-line">How It Works</span>
+              <span class="splash-footer-line">Knowledge Base</span>
+              <span class="splash-footer-line">Support</span>
             </div>
           </div>
-          <div class="splash-footer-social" aria-label="Social placeholders">
-            <span class="splash-soc" title="Facebook">f</span>
-            <span class="splash-soc" title="Twitter">𝕏</span>
-            <span class="splash-soc" title="YouTube">▶</span>
-            <span class="splash-soc" title="Email">@</span>
+          <div class="splash-footer-social-wrap">
+            <div class="splash-footer-col-title splash-stay-connected">Stay connected</div>
+            <div class="splash-footer-social" aria-label="Social links">
+              <span class="splash-soc" title="Facebook">f</span>
+              <span class="splash-soc" title="Twitter">𝕏</span>
+              <span class="splash-soc" title="YouTube">&#9654;</span>
+              <span class="splash-soc" title="Email">@</span>
+            </div>
           </div>
         </div>
-        <p class="splash-copyright">© 2026 RevTrafficXchange. All rights reserved.</p>
+        <p class="splash-copyright">&copy; 2026 RevTrafficXchange. All rights reserved.</p>
       </footer>
     </div>
   `;
