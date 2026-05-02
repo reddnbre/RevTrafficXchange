@@ -1,0 +1,70 @@
+.spotlight-wrap {
+  margin-top: 8px;
+}
+
+.spotlight-badge {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  background: rgba(249, 115, 22, 0.12);
+  color: #fdba74;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.spotlight-wrap h2 {
+  margin: 10px 0 6px;
+}
+
+.spotlight-url {
+  color: #93c5fd;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.spotlight-url:hover {
+  text-decoration: underline;
+}
+
+.spotlight-viewer {
+  margin-top: 12px;
+  border: 1px solid rgba(249, 115, 22, 0.28);
+  border-radius: 16px;
+  overflow: hidden;
+  height: clamp(420px, 60vh, 680px);
+  background: #0a0a0a;
+}
+
+.spotlight-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.spotlight-footer {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.spotlight-timer {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--orange);
+}
+
+.spotlight-credit-msg {
+  margin-top: 10px;
+  display: inline-flex;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e2e2;
+  font-size: 12px;
+  font-weight: 700;
+}

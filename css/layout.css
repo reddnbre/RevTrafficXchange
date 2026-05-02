@@ -1,0 +1,274 @@
+.app-shell {
+  min-height: 100vh;
+}
+
+.header {
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+}
+
+.main {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 10px 10px 0;
+}
+
+.app-shell.hyper-mode .main {
+  padding-top: 8px;
+}
+
+.header-inner {
+  max-width: none;
+  margin: 0;
+  padding: 6px 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 68px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 18px;
+  background: var(--orange);
+  color: #000;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 22px;
+  box-shadow: 0 0 30px rgba(249,115,22,.28);
+}
+
+.brand-title {
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+.main-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  z-index: 2;
+  max-width: 100%;
+}
+
+.main-nav-link {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.10);
+  color: #ddd;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.main-nav-link:hover {
+  background: rgba(255,255,255,0.16);
+}
+
+.main-nav-link.active {
+  background: var(--orange);
+  color: #000;
+}
+
+.nav-caret {
+  font-size: 10px;
+  margin-left: 2px;
+  opacity: 0.85;
+}
+
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.nav-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(15, 15, 15, 0.98);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+}
+
+.nav-dropdown-open .nav-dropdown-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-dropdown-item {
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e5e5;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.nav-dropdown-item:hover {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fff;
+}
+
+.main-nav-placeholder {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.main-nav-placeholder-title {
+  margin: 0 0 12px;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.main-nav-placeholder-text {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.nav button,
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.10);
+  color: #ddd;
+  font-weight: 800;
+}
+
+.nav button.active,
+.btn-primary {
+  background: var(--orange);
+  color: #000;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.32);
+}
+
+.app-legal-footer {
+  max-width: 1600px;
+  margin: 8px auto 14px;
+  padding: 0 12px;
+  text-align: center;
+}
+
+.app-legal-link {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.app-legal-link:hover {
+  color: #ddd;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr .85fr;
+  gap: 18px;
+}
+
+@media (max-width: 850px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.header-logo-icon {
+  height: 58px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.header-logo-wordmark {
+  height: 30px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .header-inner {
+    padding: 8px 12px 8px 2px;
+    min-height: 80px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .main-nav {
+    width: 100%;
+    justify-content: flex-start;
+    row-gap: 8px;
+  }
+
+  .nav-dropdown-menu {
+    left: 0;
+    right: auto;
+    min-width: min(280px, 100%);
+  }
+
+  .brand {
+    height: 64px;
+    gap: 6px;
+  }
+
+  .header-logo-icon {
+    height: 64px;
+  }
+
+  .header-logo-wordmark {
+    height: 34px;
+  }
+}
+
