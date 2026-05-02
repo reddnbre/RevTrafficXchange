@@ -46,6 +46,8 @@ function createDefaultUserState(userId) {
     /** Qualifying platform spend ($) for pool eligibility/cap — not traffic credits. */
     qualifiedSpend: 0,
     username: "",
+    /** Set once from ?ref= on splash when account is first created in this browser (local demo). */
+    referredByUsername: "",
     lastSpotlightCreditAt: 0,
     recentHyperSpinHistory: [],
     memberCampaigns: {
@@ -76,7 +78,10 @@ const RTXState = {
     adsDropdownOpen: false,
     rewardsAckVisible: true,
     rewardsAckChecked: false,
-    loginError: ""
+    loginError: "",
+    referralCopyFeedback: "",
+    /** When logged out: show marketing splash vs local sign-in form. */
+    preAuthScreen: "splash"
   },
 
   settings: {
@@ -236,6 +241,7 @@ const RTXUserPersist = {
         normalizeLifetimeStats();
         normalizeUserQualifiedSpend();
         normalizeUserProfile();
+        normalizeReferredByUsername();
         return;
       }
       const data = JSON.parse(raw);
@@ -277,6 +283,7 @@ const RTXUserPersist = {
     normalizeLifetimeStats();
     normalizeUserQualifiedSpend();
     normalizeUserProfile();
+    normalizeReferredByUsername();
   },
 
   save() {
@@ -309,6 +316,38 @@ function normalizeUserProfile() {
     u = (local || "member").slice(0, 24);
   }
   RTXState.user.username = u;
+}
+
+function normalizeReferredByUsername() {
+  let ref = String(RTXState.user && RTXState.user.referredByUsername ? RTXState.user.referredByUsername : "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 24);
+  if (!/^[a-z0-9_]{3,24}$/.test(ref)) ref = "";
+  RTXState.user.referredByUsername = ref;
+}
+
+/**
+ * One-time: pending ?ref= handle from sessionStorage → user.referredByUsername (local demo).
+ * Call after normalizeUserProfile() on sign-in.
+ */
+function applyPendingReferralAttribution() {
+  if (!RTXState.session || !RTXState.session.isAuthenticated) return;
+  if (typeof RTXReferral === "undefined" || !RTXReferral.peekPendingReferral) return;
+  const pending = RTXReferral.peekPendingReferral();
+  if (!pending) return;
+  normalizeReferredByUsername();
+  if (RTXState.user.referredByUsername) return;
+  const self = String(RTXState.user.username || "")
+    .trim()
+    .toLowerCase();
+  if (pending === self) {
+    RTXReferral.clearPendingReferral();
+    return;
+  }
+  RTXState.user.referredByUsername = pending;
+  RTXReferral.clearPendingReferral();
 }
 
 function resetToGuestUser() {

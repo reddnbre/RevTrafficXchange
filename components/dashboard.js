@@ -306,8 +306,43 @@ function DashboardComponent() {
     memberHandle && typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
       ? `<p class="dashboard-username-welcome">Member: <strong>@${App.escapeHtml(memberHandle)}</strong></p>`
       : "";
+  const referralUrl =
+    memberHandle &&
+    typeof RTXReferral !== "undefined" &&
+    RTXReferral.buildLandingUrlForRef &&
+    RTXReferral.buildLandingUrlForRef(memberHandle);
+  const referralEscaped =
+    referralUrl && typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
+      ? App.escapeHtml(referralUrl)
+      : "";
+  const referredBy = String(RTXState.user.referredByUsername || "").trim();
+  const referredLine =
+    referredBy && typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
+      ? `<p class="dashboard-referred-by">You joined with referral: <strong>@${App.escapeHtml(referredBy)}</strong></p>`
+      : "";
+  const copyFeedback =
+    RTXState.ui && RTXState.ui.referralCopyFeedback && typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
+      ? `<p class="dashboard-referral-toast" role="status">${App.escapeHtml(RTXState.ui.referralCopyFeedback)}</p>`
+      : "";
+  const referralPanel =
+    referralUrl && referralEscaped
+      ? `
+    <section class="dashboard-referral-panel" aria-label="Your referral link">
+      <div>
+        <h3 class="dashboard-referral-title">Promote RTX with your link</h3>
+        <p class="dashboard-referral-desc">Share this URL. When someone opens it and creates an account on this device, you are recorded as their referrer.</p>
+        ${referredLine}
+        <div class="dashboard-referral-row">
+          <input type="text" class="dashboard-referral-input" readonly value="${referralEscaped}" aria-label="Your referral URL" />
+          <button type="button" class="btn btn-primary dashboard-referral-copy" onclick="App.copyMemberReferralLink()">Copy link</button>
+        </div>
+        ${copyFeedback}
+      </div>
+    </section>`
+      : "";
 
   return `
+    ${referralPanel}
     <section class="hero">
       <div class="hero-grid">
         <div>

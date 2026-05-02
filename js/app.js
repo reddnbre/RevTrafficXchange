@@ -1,5 +1,8 @@
 const App = {
   init() {
+    if (typeof RTXReferral !== "undefined" && RTXReferral.captureFromUrl) {
+      RTXReferral.captureFromUrl();
+    }
     this.render();
     if (RTXState.session && RTXState.session.isAuthenticated) {
       LoadingScreen.start();
@@ -67,6 +70,9 @@ const App = {
     if (typeof normalizeUserProfile === "function") {
       normalizeUserProfile();
     }
+    if (typeof applyPendingReferralAttribution === "function") {
+      applyPendingReferralAttribution();
+    }
     RTXUserPersist.save();
     RTXState.currentView = "dashboard";
     this.render();
@@ -87,6 +93,7 @@ const App = {
     }
     RTXState.currentView = "dashboard";
     if (RTXState.ui) {
+      RTXState.ui.preAuthScreen = "splash";
       RTXState.ui.premiumSpinFeedback = "";
       RTXState.ui.premiumSpinFeedbackTone = "neutral";
       RTXState.ui.trafficBoostFeedback = "";
@@ -94,6 +101,7 @@ const App = {
       RTXState.ui.adsDropdownOpen = false;
       RTXState.ui.loginError = "";
       RTXState.ui.rewardsAckChecked = false;
+      RTXState.ui.referralCopyFeedback = "";
     }
     if (LoadingScreen.interval) {
       clearInterval(LoadingScreen.interval);
@@ -107,6 +115,45 @@ const App = {
       TrafficBoostCountdown.clear();
     }
     this.render();
+  },
+
+  openPreLogin() {
+    if (!RTXState.ui) return;
+    RTXState.ui.preAuthScreen = "login";
+    RTXState.ui.loginError = "";
+    this.render();
+  },
+
+  openPublicSplash() {
+    if (!RTXState.ui) return;
+    RTXState.ui.preAuthScreen = "splash";
+    RTXState.ui.loginError = "";
+    this.render();
+  },
+
+  copyMemberReferralLink() {
+    const handle = String(RTXState.user && RTXState.user.username ? RTXState.user.username : "").trim();
+    if (!handle || typeof RTXReferral === "undefined" || !RTXReferral.buildLandingUrlForRef) {
+      return;
+    }
+    const url = RTXReferral.buildLandingUrlForRef(handle);
+    if (!url) return;
+    const notify = (msg) => {
+      if (RTXState.ui) RTXState.ui.referralCopyFeedback = msg;
+      this.render();
+      window.setTimeout(() => {
+        if (RTXState.ui) RTXState.ui.referralCopyFeedback = "";
+        if (RTXState.session && RTXState.session.isAuthenticated) this.render();
+      }, 2200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => notify("Referral link copied."),
+        () => notify("Copy blocked—select the link and copy manually.")
+      );
+      return;
+    }
+    notify("Clipboard unavailable—copy from the field manually.");
   },
 
   navigate(view) {
@@ -150,11 +197,23 @@ const App = {
     const errBlock = err
       ? `<p class="fake-login-error" role="alert">${this.escapeHtml(err)}</p>`
       : "";
+    const pending =
+      typeof RTXReferral !== "undefined" && RTXReferral.peekPendingReferral
+        ? RTXReferral.peekPendingReferral()
+        : "";
+    const refHint =
+      pending
+        ? `<p class="fake-login-ref-hint">Referral from <strong>@${this.escapeHtml(pending)}</strong> will be saved when you continue (first sign-in on this device only).</p>`
+        : "";
     return `
       <div class="fake-login-page" aria-label="Sign in">
         <div class="fake-login-card">
+          <p class="fake-login-back">
+            <button type="button" class="fake-login-back-btn" onclick="App.openPublicSplash()">← Back to home</button>
+          </p>
           <h1 class="fake-login-title">RevTrafficXchange</h1>
           <p class="fake-login-sub">Local demo sign-in. Email is your account id on this device; username is your display name. No password and no server.</p>
+          ${refHint}
           ${errBlock}
           <form class="fake-login-form" onsubmit="event.preventDefault(); App.submitFakeLogin(); return false;">
             <label class="fake-login-label" for="fake-login-email">Email</label>
@@ -291,7 +350,12 @@ const App = {
 
   render() {
     if (!RTXState.session || !RTXState.session.isAuthenticated) {
-      document.getElementById("app").innerHTML = this.renderLoginScreen();
+      const useSplash = RTXState.ui && RTXState.ui.preAuthScreen !== "login";
+      document.getElementById("app").innerHTML = useSplash
+        ? typeof SplashPageComponent === "function"
+          ? SplashPageComponent()
+          : this.renderLoginScreen()
+        : this.renderLoginScreen();
       return;
     }
 
