@@ -1,22 +1,28 @@
 /**
- * Hyper Spin wheel — Winwheel.js (MIT, https://github.com/zarocknz/javascript-winwheel )
- * + GSAP 2 TweenMax (required by Winwheel for spin animation).
- *
- * Colored segments only on canvas (no prize text on the wheel). Fixed legend below.
- * Prize is chosen before the spin; stopAngle comes from Winwheel.getRandomForSegment(winningIndex + 1).
- * applyReward uses the pre-picked segment only — never the segment indicated by canvas math after spin.
+ * Hyper Spin — custom canvas wheel (no Winwheel / no GSAP).
+ * Segment i = HyperSpin.rewards[i], drawn clockwise from top (same as fixed legend).
+ * Prize is chosen before spin; we only animate to that index. applyReward uses the pre-picked segment.
  */
 const HyperSpinWheel = {
   isAnimating: false,
-  _wheels: {},
+  /** Cumulative rotation (radians), monotonic — used for smooth spins. */
+  _cumRot: {},
+  /** Increment to cancel in-flight RAF when a new spin starts (should not happen). */
+  _spinToken: 0,
 
-  /** Segments clockwise from top pointer = HyperSpin.rewards[] order (Winwheel segment 1 = index 0). */
+  TWO_PI: Math.PI * 2,
+
   getSegments() {
     return Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
   },
 
   wedgeColors() {
     return ["#100e0c", "#171310", "#1f1a15", "#2a2118", "#241c14", "#1a1612"];
+  },
+
+  normalizeRad(r) {
+    const t = this.TWO_PI;
+    return ((r % t) + t) % t;
   },
 
   escapeAttr(s) {
@@ -58,7 +64,6 @@ const HyperSpinWheel = {
     const vw = typeof window !== "undefined" ? window.innerWidth : 800;
     const cssPx = Math.floor(Math.min(compact ? 460 : 580, compact ? vw * 0.9 : vw * 0.95));
     const px = Math.max(240, Math.floor(cssPx * Math.min(dpr, 2)));
-    /* Resizing canvas clears pixels — only write dimensions when they change (avoids breaking Winwheel / Tween). */
     if (canvas.width === px && canvas.height === px && canvas.dataset.rtxCssPx === String(cssPx)) {
       return;
     }
@@ -71,80 +76,69 @@ const HyperSpinWheel = {
     canvas.height = px;
   },
 
-  getOrCreateWinwheel(canvasId) {
-    const compact = this.isCompactCanvasId(canvasId);
+  /** Pointer at canvas top = -π/2 (same convention as arc start at top). */
+  _computeTargetRotation(fromRad, winningIndex, n, fullSpins) {
+    const slice = this.TWO_PI / n;
+    const centerRad = -Math.PI / 2 + (winningIndex + 0.5) * slice;
+    const pointerRad = -Math.PI / 2;
+    const base = fromRad + fullSpins * this.TWO_PI;
+    let extra = this.normalizeRad(pointerRad - centerRad - base);
+    if (extra < 1e-5) extra += this.TWO_PI;
+    return base + extra;
+  },
+
+  drawWheel(canvasId, rotationRad) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas || typeof Winwheel === "undefined") return null;
-
-    const existing = this._wheels[canvasId];
-    if (existing && existing.canvas === canvas) {
-      this._fitCanvas(canvas, compact);
-      existing.centerX = canvas.width / 2;
-      existing.centerY = canvas.height / 2;
-      const outer = Math.floor(Math.min(canvas.width, canvas.height) / 2) - 6;
-      existing.outerRadius = outer;
-      existing.innerRadius = Math.max(32, Math.floor(outer * 0.14));
-      existing.draw();
-      return existing;
-    }
-
-    if (existing && typeof existing.stopAnimation === "function") {
-      try {
-        existing.stopAnimation(false);
-      } catch (e) {}
-    }
-    delete this._wheels[canvasId];
-
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const compact = this.isCompactCanvasId(canvasId);
     this._fitCanvas(canvas, compact);
-    const rewards = this.getSegments();
-    const colors = this.wedgeColors();
-    const segOpts = rewards.map((_, i) => ({
-      fillStyle: colors[i % colors.length],
-      text: "",
-      strokeStyle: "rgba(249,115,22,0.5)",
-      lineWidth: 2
-    }));
 
     const w = canvas.width;
     const h = canvas.height;
-    const outer = Math.floor(Math.min(w, h) / 2) - 6;
+    const cx = w / 2;
+    const cy = h / 2;
+    const outer = Math.min(w, h) / 2 - 6;
+    const inner = Math.max(28, outer * 0.14);
+    const rewards = this.getSegments();
+    const n = Math.max(1, rewards.length);
+    const colors = this.wedgeColors();
+    const slice = this.TWO_PI / n;
 
-    const wheel = new Winwheel(
-      {
-        canvasId,
-        numSegments: Math.max(1, rewards.length),
-        segments: segOpts,
-        outerRadius: outer,
-        innerRadius: Math.max(32, Math.floor(outer * 0.14)),
-        centerX: w / 2,
-        centerY: h / 2,
-        pointerAngle: 0,
-        drawText: false,
-        lineWidth: 2,
-        strokeStyle: "rgba(249,115,22,0.42)",
-        clearTheCanvas: true
-      },
-      true
-    );
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotationRad);
 
-    this._wheels[canvasId] = wheel;
-    return wheel;
+    for (let i = 0; i < n; i++) {
+      const a0 = -Math.PI / 2 + i * slice;
+      const a1 = -Math.PI / 2 + (i + 1) * slice;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a0) * inner, Math.sin(a0) * inner);
+      ctx.arc(0, 0, outer, a0, a1, false);
+      ctx.arc(0, 0, inner, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = "rgba(249,115,22,0.45)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
   },
 
-  /** After App replaces DOM — draw idle wheels on Hyper Spin page / session modal. */
   syncIdleWheels() {
     if (this.isAnimating) return;
-    if (typeof Winwheel === "undefined") return;
     try {
       if (typeof RTXState !== "undefined" && RTXState.currentView === "hyper-spin") {
-        if (document.getElementById("hyperspin-page-wheel-canvas")) {
-          this.getOrCreateWinwheel("hyperspin-page-wheel-canvas");
-        }
+        const c = document.getElementById("hyperspin-page-wheel-canvas");
+        if (c) this.drawWheel("hyperspin-page-wheel-canvas", this._cumRot["hyperspin-page-wheel-canvas"] || 0);
       }
       if (typeof GameModal !== "undefined" && GameModal.visible && !GameModal.currentReward && !GameModal.animating) {
-        if (document.getElementById("hyperspin-modal-wheel-canvas")) {
-          this.getOrCreateWinwheel("hyperspin-modal-wheel-canvas");
-        }
+        const c = document.getElementById("hyperspin-modal-wheel-canvas");
+        if (c) this.drawWheel("hyperspin-modal-wheel-canvas", this._cumRot["hyperspin-modal-wheel-canvas"] || 0);
       }
     } catch (e) {}
   },
@@ -172,8 +166,12 @@ const HyperSpinWheel = {
     `;
   },
 
+  _easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  },
+
   /**
-   * @param {{ canvasId?: string, diskId?: string, winningIndex: number, segment: object, onComplete?: () => void }} opts
+   * @param {{ canvasId?: string, diskId?: string, winningIndex: number, segment: object, durationMs?: number, onComplete?: () => void }} opts
    */
   startSpin(opts) {
     const onComplete = opts && typeof opts.onComplete === "function" ? opts.onComplete : null;
@@ -191,49 +189,39 @@ const HyperSpinWheel = {
       return;
     }
 
-    if (typeof Winwheel === "undefined" || typeof TweenMax === "undefined") {
-      if (onComplete) onComplete();
-      return;
-    }
-
-    const wheel = this.getOrCreateWinwheel(canvasId);
-    if (!wheel) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) {
       if (onComplete) onComplete();
       return;
     }
 
     this.isAnimating = true;
+    this._spinToken += 1;
+    const token = this._spinToken;
 
-    try {
-      wheel.stopAnimation(false);
-    } catch (e) {}
+    const compact = this.isCompactCanvasId(canvasId);
+    this._fitCanvas(canvas, compact);
 
-    let ra = Number(wheel.rotationAngle) || 0;
-    ra = ((ra % 360) + 360) % 360;
-    wheel.rotationAngle = ra;
+    const fromR = this._cumRot[canvasId] || 0;
+    const toR = this._computeTargetRotation(fromR, winningIndex, n, 6);
+    const durationMs = opts && Number(opts.durationMs) > 0 ? Number(opts.durationMs) : 4800;
+    const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
 
-    const segNum = winningIndex + 1;
-    const stopAngle = wheel.getRandomForSegment(segNum);
-
-    wheel.animation.type = "spinToStop";
-    wheel.animation.spins = 6;
-    wheel.animation.duration = 5.5;
-    wheel.animation.stopAngle = stopAngle;
-    wheel.animation.easing = "Power3.easeOut";
-    wheel.animation.callbackFinished = () => {
-      const indicated = typeof wheel.getIndicatedSegmentNumber === "function" ? wheel.getIndicatedSegmentNumber() : null;
-      if (indicated != null && indicated !== segNum) {
-        console.warn("[HyperSpinWheel] Pointer segment mismatch (payout still uses chosen segment)", {
-          chosenSegNum: segNum,
-          indicatedSegNum: indicated,
-          winningLabel: segment.label
-        });
+    const frame = (now) => {
+      if (token !== this._spinToken) return;
+      const t = Math.min(1, (now - t0) / durationMs);
+      const e = this._easeOutCubic(t);
+      const r = fromR + (toR - fromR) * e;
+      this.drawWheel(canvasId, r);
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        this._cumRot[canvasId] = toR;
+        this.isAnimating = false;
+        if (typeof onComplete === "function") onComplete();
       }
-      this.isAnimating = false;
-      if (typeof onComplete === "function") onComplete();
     };
-
-    wheel.startAnimation();
+    requestAnimationFrame(frame);
   }
 };
 
