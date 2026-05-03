@@ -14,7 +14,8 @@ const HyperSpinWheel = {
     const colors = ["#082f49", "#0e7490", "#1d4ed8", "#5b21b6", "#9d174d", "#115e59"];
     const n = this.sliceCount();
     const slice = 360 / n;
-    const parts = ["from -90deg"];
+    /* 0deg must be top (12 o'clock) so wedge index i matches rotation math in startSpin(). from -90deg shifts wedges 90° off the pointer. */
+    const parts = ["from 0deg"];
     for (let i = 0; i < n; i++) {
       const a0 = i * slice;
       const a1 = (i + 1) * slice;
@@ -30,12 +31,14 @@ const HyperSpinWheel = {
       .replace(/"/g, "&quot;");
   },
 
-  shortLabel(reward) {
+  /** Full prize line for wedge text (matches outcome copy). */
+  prizeLabel(reward) {
     if (!reward) return "?";
-    if (reward.type === "credits") return `+${reward.value}`;
-    if (reward.type === "multiplier") return `${reward.value}×`;
-    if (reward.type === "none") return "No bonus";
-    return reward.label ? String(reward.label).slice(0, 14) : "?";
+    if (reward.label) return String(reward.label).trim();
+    if (reward.type === "credits") return `+${reward.value} Credits`;
+    if (reward.type === "multiplier") return `${reward.value}× Multiplier`;
+    if (reward.type === "none") return "No Bonus";
+    return "?";
   },
 
   /**
@@ -51,7 +54,7 @@ const HyperSpinWheel = {
     const labels = rewards
       .map((r, i) => {
         const center = i * slice + slice / 2;
-        const text = this.escapeAttr(this.shortLabel(r));
+        const text = this.escapeAttr(this.prizeLabel(r));
         return `<div class="hyperspin-wheel-wedge-label" style="--hyperspin-a:${center}deg"><span>${text}</span></div>`;
       })
       .join("");

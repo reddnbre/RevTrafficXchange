@@ -10,14 +10,14 @@
 
 .hyperspin-wheel-stage {
   position: relative;
-  width: min(300px, 88vw);
+  width: min(440px, 96vw);
   aspect-ratio: 1;
-  --wheel-radius: min(135px, 40vw);
+  --wheel-radius: min(200px, 46vw);
 }
 
 .hyperspin-wheel-stage--compact {
-  width: min(260px, 82vw);
-  --wheel-radius: min(118px, 36vw);
+  width: min(380px, 94vw);
+  --wheel-radius: min(172px, 44vw);
 }
 
 .hyperspin-wheel-glow {
@@ -98,21 +98,25 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: rotate(calc(var(--hyperspin-a) - 90deg)) translateY(calc(-1 * var(--wheel-radius) * 0.72));
+  transform: rotate(calc(var(--hyperspin-a) - 90deg)) translateY(calc(-1 * var(--wheel-radius) * 0.78));
   transform-origin: center center;
 }
 
 .hyperspin-wheel-wedge-label span {
   display: block;
   transform: rotate(calc(90deg - var(--hyperspin-a)));
-  font-size: clamp(0.58rem, 2.1vw, 0.72rem);
+  font-size: clamp(0.62rem, 1.85vw, 0.82rem);
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: rgba(248, 250, 252, 0.96);
   text-shadow:
     0 0 10px rgba(56, 189, 248, 0.9),
     0 0 22px rgba(34, 211, 238, 0.45);
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  max-width: min(5.8rem, 22vw);
+  line-height: 1.12;
+  hyphens: manual;
 }
 
 .hyperspin-wheel-hub {
@@ -136,7 +140,7 @@
 }
 
 .hyperspin-wheel-hub-text {
-  font-size: clamp(1rem, 4vw, 1.35rem);
+  font-size: clamp(1.1rem, 4.2vw, 1.5rem);
   line-height: 1;
   filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8));
 }
@@ -144,13 +148,13 @@
 .hyperspin-wheel-pointer {
   position: absolute;
   left: 50%;
-  top: -2px;
+  top: 0;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 14px solid transparent;
-  border-right: 14px solid transparent;
-  border-top: 22px solid rgba(34, 211, 238, 0.95);
+  border-left: clamp(16px, 4vw, 20px) solid transparent;
+  border-right: clamp(16px, 4vw, 20px) solid transparent;
+  border-top: clamp(24px, 5.5vw, 30px) solid rgba(34, 211, 238, 0.95);
   filter: drop-shadow(0 4px 12px rgba(34, 211, 238, 0.85));
   z-index: 6;
   pointer-events: none;
@@ -160,10 +164,10 @@
   content: "";
   position: absolute;
   left: 50%;
-  top: 2px;
-  transform: translateX(-50%);
-  width: 10px;
-  height: 10px;
+  top: 3px;
+  transform: translate(-50%, 0);
+  width: clamp(11px, 2.8vw, 14px);
+  height: clamp(11px, 2.8vw, 14px);
   border-radius: 50%;
   background: #e0f2fe;
   box-shadow: 0 0 12px #22d3ee;
