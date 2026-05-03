@@ -452,8 +452,9 @@ const SurfEngine = {
   },
 
   triggerMiniGameMaybe(sessionJustCompleted = false) {
+    const viewsToday = Math.max(0, Math.floor(Number(RTXState.user && RTXState.user.viewsToday) || 0));
     if (typeof window !== "undefined" && window.MiniGameSystem && typeof window.MiniGameSystem.maybeTrigger === "function") {
-      window.MiniGameSystem.maybeTrigger(sessionJustCompleted);
+      window.MiniGameSystem.maybeTrigger(sessionJustCompleted, viewsToday);
     }
   },
 

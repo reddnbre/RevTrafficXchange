@@ -111,6 +111,8 @@ const RTXState = {
   miniGameSettings: {
     triggerBaseChance: 8,
     triggerSessionChance: 25,
+    /** Every N valid views today guarantees a mini-game (0 = off, random only). */
+    triggerEveryNSurfs: 15,
     cooldownMinutes: 2,
     coinDropPerfectPercent: 5,
     coinDropGoodPercent: 3,
@@ -559,9 +561,14 @@ function normalizeMiniGameSettings() {
   const miniBoostMultiplier = Number.isNaN(mult) || mult < 1 ? defaults.miniBoostMultiplier : mult;
   const mins = Math.floor(Number(merged.miniBoostMinutes));
   const miniBoostMinutes = Number.isNaN(mins) || mins < 1 ? defaults.miniBoostMinutes : mins;
+  const everyN = Math.floor(Number(merged.triggerEveryNSurfs));
+  const triggerEveryNSurfs = Number.isNaN(everyN)
+    ? defaults.triggerEveryNSurfs
+    : Math.max(0, Math.min(500, everyN));
   RTXState.miniGameSettings = {
     triggerBaseChance: clampPct(merged.triggerBaseChance, defaults.triggerBaseChance),
     triggerSessionChance: clampPct(merged.triggerSessionChance, defaults.triggerSessionChance),
+    triggerEveryNSurfs,
     cooldownMinutes: Math.max(0, Math.min(1440, Number(merged.cooldownMinutes) || defaults.cooldownMinutes)),
     coinDropPerfectPercent: clampPct(merged.coinDropPerfectPercent, defaults.coinDropPerfectPercent),
     coinDropGoodPercent: clampPct(merged.coinDropGoodPercent, defaults.coinDropGoodPercent),

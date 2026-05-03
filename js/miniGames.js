@@ -34,6 +34,7 @@ const MiniGameSystem = {
   laserCutResolved: false,
   _miniGameSessionGrantCount: 0,
   _miniGameSessionsCompletedSnapshot: null,
+  triggerEveryNSurfs: 15,
 
   syncMiniGameEconomyFromSettings() {
     if (typeof normalizeMiniGameSettings === "function") normalizeMiniGameSettings();
@@ -42,6 +43,7 @@ const MiniGameSystem = {
     this.cooldownMs = cooldownMin * 60 * 1000;
     this.baseChance = Math.max(0, Math.min(1, (Number(s.triggerBaseChance) || 0) / 100));
     this.sessionBonusChance = Math.max(0, Math.min(1, (Number(s.triggerSessionChance) || 0) / 100));
+    this.triggerEveryNSurfs = Math.max(0, Math.floor(Number(s.triggerEveryNSurfs) || 0));
   },
 
   getMiniGameRewardConfig() {
@@ -193,14 +195,23 @@ const MiniGameSystem = {
     );
   },
 
-  maybeTrigger(sessionJustCompleted = false) {
+  maybeTrigger(sessionJustCompleted = false, viewsTodayAfterClaim = null) {
     this.syncMiniGameEconomyFromSettings();
     if (this.active) return;
     if (this.hasBlockingOverlay()) return;
-    const now = Date.now();
-    if (now - this.lastShownAt < this.cooldownMs) return;
-    const chance = sessionJustCompleted ? this.sessionBonusChance : this.baseChance;
-    if (Math.random() >= chance) return;
+    const viewsRaw =
+      viewsTodayAfterClaim != null
+        ? viewsTodayAfterClaim
+        : Math.max(0, Math.floor(Number(RTXState.user && RTXState.user.viewsToday) || 0));
+    const viewsToday = Math.max(0, Math.floor(Number(viewsRaw) || 0));
+    const everyN = this.triggerEveryNSurfs;
+    const milestoneHit = everyN > 0 && viewsToday > 0 && viewsToday % everyN === 0;
+    if (!milestoneHit) {
+      const now = Date.now();
+      if (now - this.lastShownAt < this.cooldownMs) return;
+      const chance = sessionJustCompleted ? this.sessionBonusChance : this.baseChance;
+      if (Math.random() >= chance) return;
+    }
     this.showMiniGame();
   },
 

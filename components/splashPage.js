@@ -72,7 +72,7 @@ function SplashPageComponent() {
           <article class="splash-card splash-card-feature">
             <div class="splash-card-icon" aria-hidden="true">&#127918;</div>
             <h3>PLAY MINI-GAMES</h3>
-            <p>Random mini-games can appear while surfing with bonus opportunities.</p>
+            <p>Mini-games appear every 15 valid views you claim today, plus extra random chances between milestones.</p>
           </article>
           <article class="splash-card splash-card-feature">
             <div class="splash-card-icon" aria-hidden="true">&#127942;</div>

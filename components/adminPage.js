@@ -58,6 +58,7 @@ const AdminBackOffice = {
   miniGameDraft: {
     triggerBaseChance: "8",
     triggerSessionChance: "25",
+    triggerEveryNSurfs: "15",
     cooldownMinutes: "2",
     coinDropPerfectPercent: "5",
     coinDropGoodPercent: "3",
@@ -175,6 +176,7 @@ const AdminBackOffice = {
     this.miniGameDraft = {
       triggerBaseChance: String(Math.max(0, Number(s.triggerBaseChance) || 0)),
       triggerSessionChance: String(Math.max(0, Number(s.triggerSessionChance) || 0)),
+      triggerEveryNSurfs: String(Math.max(0, Math.floor(Number(s.triggerEveryNSurfs) || 0))),
       cooldownMinutes: String(Math.max(0, Number(s.cooldownMinutes) || 0)),
       coinDropPerfectPercent: String(Math.max(0, Number(s.coinDropPerfectPercent) || 0)),
       coinDropGoodPercent: String(Math.max(0, Number(s.coinDropGoodPercent) || 0)),
@@ -799,6 +801,17 @@ const AdminBackOffice = {
               step="0.1"
               value="${d.triggerSessionChance}"
               oninput="AdminBackOffice.updateMiniGameDraft('triggerSessionChance', this.value)"
+            />
+          </label>
+          <label>
+            Guaranteed mini-game every N views today (0 = off)
+            <input
+              type="number"
+              min="0"
+              max="500"
+              step="1"
+              value="${d.triggerEveryNSurfs}"
+              oninput="AdminBackOffice.updateMiniGameDraft('triggerEveryNSurfs', this.value)"
             />
           </label>
           <label>
