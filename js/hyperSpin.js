@@ -9,19 +9,23 @@ const HyperSpin = {
     { label: "No Bonus", type: "none", value: 0, weight: 7 }
   ],
 
-  spin() {
+  pickReward() {
     const totalWeight = this.rewards.reduce((sum, item) => sum + item.weight, 0);
     let roll = Math.random() * totalWeight;
-
-    for (const reward of this.rewards) {
+    for (let i = 0; i < this.rewards.length; i++) {
+      const reward = this.rewards[i];
       roll -= reward.weight;
-      if (roll <= 0) return this.applyReward(reward);
+      if (roll <= 0) return { reward, index: i };
     }
-
-    return this.applyReward(this.rewards[0]);
+    return { reward: this.rewards[0], index: 0 };
   },
 
-  applyReward(reward) {
+  spin() {
+    const { reward } = this.pickReward();
+    return this.applyReward(reward);
+  },
+
+  applyReward(reward, skipRender) {
     checkDailyReset();
     RTXState.user.dailyActivity.hyperSpinsUsed += 1;
     RTXState.user.dailyActivity.activityScore += 5;
@@ -44,7 +48,9 @@ const HyperSpin = {
     RTXState.user.loyaltyScore += 5;
     RTXUserPersist.save();
 
-    App.render();
+    if (!skipRender && typeof App !== "undefined" && App && typeof App.render === "function") {
+      App.render();
+    }
     return reward;
   }
 };

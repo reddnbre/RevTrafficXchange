@@ -1600,6 +1600,8 @@ const HyperSpinPageUI = {
   lastTone: "neutral",
 
   useSpin() {
+    if (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating) return;
+
     const currentSpins = Math.max(0, Number(RTXState.user.hyperSpins) || 0);
     if (currentSpins <= 0) {
       this.lastReward = "No Hyper Spins available. Buy one from RevCoin Store.";
@@ -1609,7 +1611,39 @@ const HyperSpinPageUI = {
     }
 
     RTXState.user.hyperSpins = currentSpins - 1;
-    const reward = HyperSpin.spin();
+    const picked = HyperSpin.pickReward();
+    RTXUserPersist.save();
+    App.render();
+
+    const runWheel = () => {
+      if (typeof HyperSpinWheel === "undefined" || !HyperSpinWheel.startSpin) {
+        const reward = HyperSpin.applyReward(picked.reward, true);
+        this._recordSpinSuccess(reward);
+        RTXUserPersist.save();
+        App.render();
+        return;
+      }
+      HyperSpinWheel.startSpin({
+        diskId: "hyperspin-page-wheel-disk",
+        rewardIndex: picked.index,
+        reward: picked.reward,
+        onComplete: (reward) => {
+          HyperSpin.applyReward(reward, true);
+          this._recordSpinSuccess(reward);
+          RTXUserPersist.save();
+          App.render();
+        }
+      });
+    };
+
+    if (typeof queueMicrotask === "function") {
+      queueMicrotask(runWheel);
+    } else {
+      setTimeout(runWheel, 0);
+    }
+  },
+
+  _recordSpinSuccess(reward) {
     this.lastReward = reward && reward.label ? `You won: ${reward.label}` : "Spin complete.";
     this.lastTone = "success";
     const currentHistory = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
@@ -1619,14 +1653,17 @@ const HyperSpinPageUI = {
       time: new Date().toLocaleTimeString()
     });
     RTXState.user.recentHyperSpinHistory = currentHistory.slice(0, 3);
-    RTXUserPersist.save();
-    App.render();
   }
 };
 
 function HyperSpinPageComponent() {
   const spins = Math.max(0, Number(RTXState.user.hyperSpins) || 0);
   const recentSpins = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
+  const wheelBusy = typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating;
+  const wheelHtml =
+    typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML
+      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-page-wheel-disk", stageClass: "" })
+      : "";
   return `
     <section class="revcoin-store-page">
       <header class="my-sites-header">
@@ -1638,15 +1675,19 @@ function HyperSpinPageComponent() {
       </header>
 
       <section class="panel hyperspin-panel">
-        <h3>Spin for a bonus</h3>
-        <p class="my-sites-subtitle">Rewards can include bonus credits or multipliers.</p>
+        <h3>Spin the wheel</h3>
+        <p class="my-sites-subtitle">Futuristic wheel — bonus credits, multipliers, or no bonus. Outcome matches where the pointer lands.</p>
+        <div class="hyperspin-wheel-wrap">
+          ${wheelHtml}
+          ${wheelBusy ? `<div class="hyperspin-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
+        </div>
         <button
           type="button"
           class="btn btn-primary hyperspin-spin-btn"
           onclick="HyperSpinPageUI.useSpin()"
-          ${spins > 0 ? "" : "disabled"}
+          ${spins > 0 && !wheelBusy ? "" : "disabled"}
         >
-          ${spins > 0 ? "Spin Now" : "No Spins Available"}
+          ${wheelBusy ? "Spinning…" : spins > 0 ? "Spin Now" : "No Spins Available"}
         </button>
         ${
           HyperSpinPageUI.lastReward
