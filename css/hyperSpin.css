@@ -1,4 +1,4 @@
-/* Hyper Spin — prize wheel (matches site :root orange-on-dark) */
+/* Hyper Spin — wheel (wedges only) + fixed legend + result (site orange / dark) */
 
 .hyperspin-wheel-wrap {
   display: flex;
@@ -8,7 +8,15 @@
   margin: 8px 0 24px;
 }
 
-/* Large wheel on Hyper Spin page — use most of the viewport so it reads clearly bigger */
+.hyperspin-wheel-ui {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+}
+
 .hyperspin-wheel-stage {
   position: relative;
   width: min(640px, min(96vw, 92vmin));
@@ -89,70 +97,6 @@
   box-shadow: inset 0 0 48px rgba(0, 0, 0, 0.5);
 }
 
-.hyperspin-wheel-labels {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.hyperspin-wheel-wedge-label {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: rotate(calc(var(--hyperspin-a) - 90deg)) translateY(calc(-1 * var(--wheel-radius) * 0.8));
-  transform-origin: center center;
-}
-
-/* Full prize name (e.g. "+10 Credits", "1.2x Multiplier") — wide enough not to clip on large wheel */
-.hyperspin-wheel-wedge-label span {
-  display: block;
-  transform: rotate(calc(90deg - var(--hyperspin-a)));
-  font-size: clamp(0.72rem, 1.35vw, 0.98rem);
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--text, #fff);
-  text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.9),
-    0 0 12px rgba(249, 115, 22, 0.35);
-  white-space: normal;
-  text-align: center;
-  word-break: break-word;
-  max-width: min(11.5rem, 36vw);
-  line-height: 1.18;
-}
-
-.hyperspin-wheel-stage--compact .hyperspin-wheel-wedge-label span {
-  font-size: clamp(0.62rem, 2.6vw, 0.82rem);
-  max-width: min(9.5rem, 40vw);
-  line-height: 1.14;
-}
-
-.hyperspin-wheel-hub {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 20%;
-  height: 20%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  z-index: 4;
-  background: radial-gradient(circle at 35% 28%, rgba(40, 36, 32, 0.98), #0a0908 72%);
-  border: 2px solid rgba(249, 115, 22, 0.45);
-  box-shadow:
-    0 0 18px rgba(249, 115, 22, 0.25),
-    inset 0 0 16px rgba(0, 0, 0, 0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hyperspin-wheel-hub-text {
-  font-size: clamp(1rem, 3.6vw, 1.45rem);
-  line-height: 1;
-  filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.55));
-}
-
 .hyperspin-wheel-pointer {
   position: absolute;
   left: 50%;
@@ -181,6 +125,47 @@
   box-shadow: 0 0 10px rgba(249, 115, 22, 0.75);
 }
 
+/* Fixed legend — clockwise from top = list order */
+.hyperspin-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: min(100%, 420px);
+  display: grid;
+  gap: 8px;
+}
+
+.hyperspin-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--panel-soft, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.hyperspin-legend-item--active {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: var(--orange-soft, rgba(249, 115, 22, 0.16));
+}
+
+.hyperspin-legend-swatch {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35) inset;
+}
+
+.hyperspin-legend-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text, #fff);
+  line-height: 1.25;
+}
+
 .hyperspin-spinning-hint {
   font-size: 0.88rem;
   font-weight: 800;
@@ -200,7 +185,20 @@
   }
 }
 
-/* Session modal — same tokens as panels + orange accent */
+.hyperspin-result-card {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--orange-soft, rgba(249, 115, 22, 0.16));
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text, #fff);
+  text-align: center;
+  line-height: 1.35;
+}
+
+/* Session modal */
 .hyper-spin-modal.modal {
   border: 1px solid rgba(249, 115, 22, 0.35);
   background:
@@ -213,7 +211,8 @@
   background: var(--orange-soft, rgba(249, 115, 22, 0.16));
   border: 1px solid rgba(249, 115, 22, 0.28);
   color: var(--text, #fff);
-  font-size: clamp(1.1rem, 3.5vw, 1.45rem);
+  font-size: clamp(1.05rem, 3.2vw, 1.35rem);
+  font-weight: 800;
   text-shadow: none;
 }
 

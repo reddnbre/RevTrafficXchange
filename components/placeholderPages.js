@@ -1598,6 +1598,7 @@ function SpotlightBookingPageComponent() {
 const HyperSpinPageUI = {
   lastReward: "",
   lastTone: "neutral",
+  _spinPick: null,
 
   useSpin() {
     if (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating) return;
@@ -1606,30 +1607,39 @@ const HyperSpinPageUI = {
     if (currentSpins <= 0) {
       this.lastReward = "No Hyper Spins available. Buy one from RevCoin Store.";
       this.lastTone = "error";
+      this._spinPick = null;
       App.render();
       return;
     }
 
+    if (this.lastTone === "success") {
+      this.lastReward = "";
+      this.lastTone = "neutral";
+    }
+
+    const picked = HyperSpin.pickWinningSegment();
+    this._spinPick = picked;
     RTXState.user.hyperSpins = currentSpins - 1;
-    const picked = HyperSpin.pickReward();
     RTXUserPersist.save();
     App.render();
 
     const runWheel = () => {
       if (typeof HyperSpinWheel === "undefined" || !HyperSpinWheel.startSpin) {
-        const reward = HyperSpin.applyReward(picked.reward, true);
-        this._recordSpinSuccess(reward);
+        HyperSpin.applyReward(picked.segment, true);
+        this._recordSpinSuccess(picked.segment);
+        this._spinPick = null;
         RTXUserPersist.save();
         App.render();
         return;
       }
       HyperSpinWheel.startSpin({
         diskId: "hyperspin-page-wheel-disk",
-        rewardIndex: picked.index,
-        reward: picked.reward,
-        onComplete: (reward) => {
-          HyperSpin.applyReward(reward, true);
-          this._recordSpinSuccess(reward);
+        winningIndex: picked.winningIndex,
+        segment: picked.segment,
+        onComplete: () => {
+          HyperSpin.applyReward(picked.segment, true);
+          this._recordSpinSuccess(picked.segment);
+          this._spinPick = null;
           RTXUserPersist.save();
           App.render();
         }
@@ -1644,7 +1654,7 @@ const HyperSpinPageUI = {
   },
 
   _recordSpinSuccess(reward) {
-    this.lastReward = reward && reward.label ? `You won: ${reward.label}` : "Spin complete.";
+    this.lastReward = reward && reward.label ? `You won: ${reward.label}` : "You won: (see wheel)";
     this.lastTone = "success";
     const currentHistory = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
     currentHistory.unshift({
@@ -1660,9 +1670,13 @@ function HyperSpinPageComponent() {
   const spins = Math.max(0, Number(RTXState.user.hyperSpins) || 0);
   const recentSpins = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
   const wheelBusy = typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating;
+  const highlightIndex =
+    wheelBusy && HyperSpinPageUI._spinPick && typeof HyperSpinPageUI._spinPick.winningIndex === "number"
+      ? HyperSpinPageUI._spinPick.winningIndex
+      : null;
   const wheelHtml =
     typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML
-      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-page-wheel-disk", stageClass: "" })
+      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-page-wheel-disk", stageClass: "", highlightIndex })
       : "";
   return `
     <section class="revcoin-store-page">
@@ -1676,7 +1690,7 @@ function HyperSpinPageComponent() {
 
       <section class="panel hyperspin-panel">
         <h3>Spin the wheel</h3>
-        <p class="my-sites-subtitle">Futuristic wheel — bonus credits, multipliers, or no bonus. Outcome matches where the pointer lands.</p>
+        <p class="my-sites-subtitle">The prize is chosen first, then the wheel spins to match. Segment order follows the legend (top → clockwise).</p>
         <div class="hyperspin-wheel-wrap">
           ${wheelHtml}
           ${wheelBusy ? `<div class="hyperspin-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
@@ -1690,7 +1704,9 @@ function HyperSpinPageComponent() {
           ${wheelBusy ? "Spinning…" : spins > 0 ? "Spin Now" : "No Spins Available"}
         </button>
         ${
-          HyperSpinPageUI.lastReward
+          HyperSpinPageUI.lastReward && HyperSpinPageUI.lastTone === "success"
+            ? `<div class="hyperspin-result-card">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
+            : HyperSpinPageUI.lastReward
             ? `<div class="hyperspin-feedback ${HyperSpinPageUI.lastTone}">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : ""
         }

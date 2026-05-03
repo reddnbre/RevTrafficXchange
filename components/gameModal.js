@@ -2,36 +2,41 @@ const GameModal = {
   currentReward: null,
   visible: false,
   animating: false,
+  _spinPick: null,
 
   showHyperSpin() {
     this.visible = true;
     this.currentReward = null;
     this.animating = false;
+    this._spinPick = null;
     App.render();
   },
 
   spin() {
     if (this.animating || (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating)) return;
-    const picked = HyperSpin.pickReward();
+    const picked = HyperSpin.pickWinningSegment();
+    this._spinPick = picked;
     this.animating = true;
     App.render();
     const run = () => {
       if (typeof HyperSpinWheel === "undefined" || !HyperSpinWheel.startSpin) {
-        HyperSpin.applyReward(picked.reward, true);
-        this.currentReward = picked.reward;
+        HyperSpin.applyReward(picked.segment, true);
+        this.currentReward = picked.segment;
         this.animating = false;
+        this._spinPick = null;
         RTXUserPersist.save();
         App.render();
         return;
       }
       HyperSpinWheel.startSpin({
         diskId: "hyperspin-modal-wheel-disk",
-        rewardIndex: picked.index,
-        reward: picked.reward,
-        onComplete: (reward) => {
-          HyperSpin.applyReward(reward, true);
-          this.currentReward = reward;
+        winningIndex: picked.winningIndex,
+        segment: picked.segment,
+        onComplete: () => {
+          HyperSpin.applyReward(picked.segment, true);
+          this.currentReward = picked.segment;
           this.animating = false;
+          this._spinPick = null;
           RTXUserPersist.save();
           App.render();
         }
@@ -48,6 +53,7 @@ const GameModal = {
     this.visible = false;
     this.currentReward = null;
     this.animating = false;
+    this._spinPick = null;
     App.render();
   },
 
@@ -55,12 +61,23 @@ const GameModal = {
     if (!this.visible) return "";
 
     const wheelReady = typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML;
+    const highlightIndex =
+      this.animating && this._spinPick && typeof this._spinPick.winningIndex === "number"
+        ? this._spinPick.winningIndex
+        : null;
     const wheelHtml = wheelReady
-      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-modal-wheel-disk", stageClass: "hyperspin-wheel-stage--compact" })
+      ? HyperSpinWheel.renderHTML({
+          diskId: "hyperspin-modal-wheel-disk",
+          stageClass: "hyperspin-wheel-stage--compact",
+          highlightIndex
+        })
       : "";
 
     const showWheel = !this.currentReward;
     const spinning = this.animating;
+
+    const wonLabel =
+      this.currentReward && this.currentReward.label ? String(this.currentReward.label) : "";
 
     return `
       <div class="modal-overlay">
@@ -83,7 +100,7 @@ const GameModal = {
 
           ${
             this.currentReward
-              ? `<div class="spin-result">${this.currentReward.label}</div>`
+              ? `<div class="spin-result">You won: ${typeof escapeHtmlAttr === "function" ? escapeHtmlAttr(wonLabel) : wonLabel}</div>`
               : ""
           }
 

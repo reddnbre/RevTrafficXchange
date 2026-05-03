@@ -1,5 +1,9 @@
 const HyperSpin = {
   premiumSpinCost: 10,
+  /**
+   * Wheel segment order (must match HyperSpinWheel conic, clockwise from fixed top pointer):
+   * index 0 = top wedge, then clockwise.
+   */
   rewards: [
     { label: "+5 Credits", type: "credits", value: 5, weight: 35 },
     { label: "+10 Credits", type: "credits", value: 10, weight: 25 },
@@ -9,20 +13,24 @@ const HyperSpin = {
     { label: "No Bonus", type: "none", value: 0, weight: 7 }
   ],
 
-  pickReward() {
-    const totalWeight = this.rewards.reduce((sum, item) => sum + item.weight, 0);
+  /**
+   * Weighted random segment index. `rewards` order = visual order clockwise from top pointer.
+   * @returns {{ winningIndex: number, segment: object }}
+   */
+  pickWinningSegment() {
+    const segments = this.rewards;
+    const totalWeight = segments.reduce((sum, item) => sum + (Number(item.weight) || 0), 0);
     let roll = Math.random() * totalWeight;
-    for (let i = 0; i < this.rewards.length; i++) {
-      const reward = this.rewards[i];
-      roll -= reward.weight;
-      if (roll <= 0) return { reward, index: i };
+    for (let i = 0; i < segments.length; i++) {
+      roll -= Number(segments[i].weight) || 0;
+      if (roll <= 0) return { winningIndex: i, segment: segments[i] };
     }
-    return { reward: this.rewards[0], index: 0 };
+    return { winningIndex: 0, segment: segments[0] };
   },
 
   spin() {
-    const { reward } = this.pickReward();
-    return this.applyReward(reward);
+    const { segment } = this.pickWinningSegment();
+    return this.applyReward(segment);
   },
 
   applyReward(reward, skipRender) {
