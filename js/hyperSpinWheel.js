@@ -11,7 +11,8 @@ const HyperSpinWheel = {
   },
 
   buildConicGradient() {
-    const colors = ["#082f49", "#0e7490", "#1d4ed8", "#5b21b6", "#9d174d", "#115e59"];
+    /* Warm dark wedges + orange-brown accents — matches site :root (--bg / --orange). */
+    const colors = ["#100e0c", "#171310", "#1f1a15", "#2a2118", "#241c14", "#1a1612"];
     const n = this.sliceCount();
     const slice = 360 / n;
     /* 0deg must be top (12 o'clock) so wedge index i matches rotation math in startSpin(). from -90deg shifts wedges 90° off the pointer. */
