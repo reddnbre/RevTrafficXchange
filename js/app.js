@@ -42,11 +42,47 @@ const App = {
     return /^[a-z0-9_]{3,24}$/.test(u);
   },
 
+  /** Demo password: any non-empty string, min length for UX only (not stored). */
+  isValidDemoPassword(pw) {
+    const p = String(pw || "");
+    return p.length >= 6;
+  },
+
+  ensureLoginCaptcha() {
+    if (!RTXState.ui) return;
+    const a = Math.floor(Math.random() * 9) + 1;
+    const b = Math.floor(Math.random() * 9) + 1;
+    RTXState.ui.loginCaptchaA = a;
+    RTXState.ui.loginCaptchaB = b;
+    RTXState.ui.loginCaptchaSum = a + b;
+  },
+
+  refreshLoginCaptcha() {
+    this.ensureLoginCaptcha();
+    this.render();
+  },
+
+  hasLocalAccountForEmail(email) {
+    const id = this.sanitizeFakeLoginEmail(email);
+    if (!id) return false;
+    try {
+      return !!localStorage.getItem(`rtx_user_state_v1:${id}`);
+    } catch (e) {
+      return false;
+    }
+  },
+
   submitFakeLogin() {
     const input = document.getElementById("fake-login-email");
     const userId = this.sanitizeFakeLoginEmail(input ? input.value : "");
+    const passEl = document.getElementById("fake-login-password");
+    const password = passEl ? String(passEl.value || "") : "";
+    const captchaEl = document.getElementById("fake-login-captcha");
+    const captchaVal = captchaEl ? String(captchaEl.value || "").trim() : "";
     const usernameInput = document.getElementById("fake-login-username");
     const username = this.sanitizeMemberUsername(usernameInput ? usernameInput.value : "");
+    const existingAccount = this.hasLocalAccountForEmail(userId);
+
     if (!userId) {
       RTXState.ui.loginError = "Enter your email.";
       this.render();
@@ -57,11 +93,30 @@ const App = {
       this.render();
       return;
     }
-    if (username && !this.isValidMemberUsername(username)) {
-      RTXState.ui.loginError = "Username must be 3–24 characters (letters, numbers, underscores), or leave it blank to keep yours.";
+    if (!this.isValidDemoPassword(password)) {
+      RTXState.ui.loginError = "Enter a password (at least 6 characters for this demo; it is not sent to any server).";
       this.render();
       return;
     }
+    const expected = Number(RTXState.ui && RTXState.ui.loginCaptchaSum);
+    if (String(Number(captchaVal)) !== String(expected) || Number.isNaN(Number(captchaVal))) {
+      RTXState.ui.loginError = "Captcha answer is incorrect. Try again.";
+      this.ensureLoginCaptcha();
+      this.render();
+      return;
+    }
+    if (!existingAccount && !this.isValidMemberUsername(username)) {
+      RTXState.ui.loginError =
+        "Choose a profile username (3–24 characters: letters, numbers, underscores). It is saved after you sign in.";
+      this.render();
+      return;
+    }
+    if (existingAccount && username && !this.isValidMemberUsername(username)) {
+      RTXState.ui.loginError = "Profile username must be 3–24 characters (a–z, 0–9, _), or leave blank to keep your saved name.";
+      this.render();
+      return;
+    }
+
     RTXState.ui.loginError = "";
     switchUser(userId);
     if (username) {
@@ -74,6 +129,7 @@ const App = {
       applyPendingReferralAttribution();
     }
     RTXUserPersist.save();
+    this.ensureLoginCaptcha();
     RTXState.currentView = "dashboard";
     this.render();
     LoadingScreen.start();
@@ -193,6 +249,9 @@ const App = {
   },
 
   renderLoginScreen() {
+    if (!RTXState.ui || RTXState.ui.loginCaptchaSum < 2) {
+      this.ensureLoginCaptcha();
+    }
     const err = RTXState.ui && RTXState.ui.loginError ? String(RTXState.ui.loginError) : "";
     const errBlock = err
       ? `<p class="fake-login-error" role="alert">${this.escapeHtml(err)}</p>`
@@ -205,6 +264,8 @@ const App = {
       pending
         ? `<p class="fake-login-ref-hint">Referral from <strong>@${this.escapeHtml(pending)}</strong> will be saved when you continue (first sign-in on this device only).</p>`
         : "";
+    const ca = RTXState.ui && typeof RTXState.ui.loginCaptchaA === "number" ? RTXState.ui.loginCaptchaA : 1;
+    const cb = RTXState.ui && typeof RTXState.ui.loginCaptchaB === "number" ? RTXState.ui.loginCaptchaB : 1;
     return `
       <div class="fake-login-page" aria-label="Sign in">
         <div class="fake-login-card">
@@ -212,7 +273,7 @@ const App = {
             <button type="button" class="fake-login-back-btn" onclick="App.openPublicSplash()">← Back to home</button>
           </p>
           <h1 class="fake-login-title">RevTrafficXchange</h1>
-          <p class="fake-login-sub">Local demo sign-in. Email is your account id on this device; username is your display name. No password and no server.</p>
+          <p class="fake-login-sub">Local demo: email identifies your account in this browser. Password and captcha are checked here only — nothing is sent to a server.</p>
           ${refHint}
           ${errBlock}
           <form class="fake-login-form" onsubmit="event.preventDefault(); App.submitFakeLogin(); return false;">
@@ -226,7 +287,40 @@ const App = {
               placeholder="you@example.com"
               required
             />
-            <label class="fake-login-label" for="fake-login-username">Username</label>
+
+            <label class="fake-login-label" for="fake-login-password">Password</label>
+            <input
+              id="fake-login-password"
+              class="fake-login-input"
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              placeholder="At least 6 characters (demo only)"
+              minlength="6"
+              required
+            />
+
+            <div class="fake-login-captcha-block">
+              <label class="fake-login-label" for="fake-login-captcha">Captcha</label>
+              <div class="fake-login-captcha-row">
+                <span class="fake-login-captcha-question" aria-live="polite">${ca} + ${cb} =</span>
+                <input
+                  id="fake-login-captcha"
+                  class="fake-login-input fake-login-captcha-input"
+                  type="text"
+                  inputmode="numeric"
+                  name="captcha"
+                  autocomplete="off"
+                  maxlength="3"
+                  placeholder="?"
+                  required
+                  aria-label="Captcha answer"
+                />
+              </div>
+              <button type="button" class="fake-login-captcha-refresh" onclick="App.refreshLoginCaptcha()">New challenge</button>
+            </div>
+
+            <label class="fake-login-label" for="fake-login-username">Profile username</label>
             <input
               id="fake-login-username"
               class="fake-login-input"
@@ -236,9 +330,10 @@ const App = {
               autocapitalize="none"
               spellcheck="false"
               maxlength="24"
-              placeholder="your_handle (optional if you already have one)"
+              placeholder="your_handle"
             />
-            <p class="fake-login-field-hint">3–24 characters: a–z, 0–9, underscore. Shown as @username. Leave blank on return visits to keep your saved name.</p>
+            <p class="fake-login-field-hint">Saved after sign-in (3–24 characters: a–z, 0–9, _). Required for new accounts; leave blank when returning if you keep the same email.</p>
+
             <button type="submit" class="fake-login-submit">Continue</button>
           </form>
           <p class="fake-login-note">Each email keeps its own credits, campaigns, and progress in this browser.</p>

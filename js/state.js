@@ -81,7 +81,11 @@ const RTXState = {
     loginError: "",
     referralCopyFeedback: "",
     /** When logged out: show marketing splash vs local sign-in form. */
-    preAuthScreen: "splash"
+    preAuthScreen: "splash",
+    /** Simple math captcha for local demo login (sum of loginCaptchaA + loginCaptchaB). */
+    loginCaptchaA: 0,
+    loginCaptchaB: 0,
+    loginCaptchaSum: 0
   },
 
   settings: {

@@ -12,7 +12,7 @@
 }
 
 .fake-login-card {
-  width: min(420px, 100%);
+  width: min(440px, 100%);
   border-radius: 24px;
   border: 1px solid rgba(249, 115, 22, 0.35);
   background: linear-gradient(145deg, rgba(12, 12, 14, 0.95), rgba(6, 10, 18, 0.92));
@@ -118,6 +118,49 @@
   font-size: 0.75rem;
   line-height: 1.4;
   color: var(--muted);
+}
+
+.fake-login-captcha-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fake-login-captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.fake-login-captcha-question {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #e0f2fe;
+  letter-spacing: 0.04em;
+  min-width: 5.5rem;
+}
+
+.fake-login-captcha-input {
+  flex: 1 1 100px;
+  max-width: 120px;
+}
+
+.fake-login-captcha-refresh {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #38bdf8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.fake-login-captcha-refresh:hover {
+  color: #7dd3fc;
 }
 
 .header-right {
