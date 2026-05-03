@@ -29,7 +29,7 @@ const GameModal = {
         return;
       }
       HyperSpinWheel.startSpin({
-        diskId: "hyperspin-modal-wheel-disk",
+        canvasId: "hyperspin-modal-wheel-canvas",
         winningIndex: picked.winningIndex,
         segment: picked.segment,
         onComplete: () => {
@@ -67,7 +67,7 @@ const GameModal = {
         : null;
     const wheelHtml = wheelReady
       ? HyperSpinWheel.renderHTML({
-          diskId: "hyperspin-modal-wheel-disk",
+          canvasId: "hyperspin-modal-wheel-canvas",
           stageClass: "hyperspin-wheel-stage--compact",
           highlightIndex
         })

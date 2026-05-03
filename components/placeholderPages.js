@@ -1633,7 +1633,7 @@ const HyperSpinPageUI = {
         return;
       }
       HyperSpinWheel.startSpin({
-        diskId: "hyperspin-page-wheel-disk",
+        canvasId: "hyperspin-page-wheel-canvas",
         winningIndex: picked.winningIndex,
         segment: picked.segment,
         onComplete: () => {
@@ -1676,7 +1676,7 @@ function HyperSpinPageComponent() {
       : null;
   const wheelHtml =
     typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML
-      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-page-wheel-disk", stageClass: "", highlightIndex })
+      ? HyperSpinWheel.renderHTML({ canvasId: "hyperspin-page-wheel-canvas", stageClass: "", highlightIndex })
       : "";
   return `
     <section class="revcoin-store-page">

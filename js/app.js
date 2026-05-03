@@ -476,6 +476,9 @@ const App = {
     if (typeof queueMicrotask === "function") {
       queueMicrotask(() => {
         if (typeof manageTrafficBoostCountdown === "function") manageTrafficBoostCountdown();
+        if (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.syncIdleWheels) {
+          HyperSpinWheel.syncIdleWheels();
+        }
       });
     }
   }
