@@ -57,11 +57,16 @@ const HyperSpinWheel = {
     const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
     const vw = typeof window !== "undefined" ? window.innerWidth : 800;
     const cssPx = Math.floor(Math.min(compact ? 460 : 580, compact ? vw * 0.9 : vw * 0.95));
+    const px = Math.max(240, Math.floor(cssPx * Math.min(dpr, 2)));
+    /* Resizing canvas clears pixels — only write dimensions when they change (avoids breaking Winwheel / Tween). */
+    if (canvas.width === px && canvas.height === px && canvas.dataset.rtxCssPx === String(cssPx)) {
+      return;
+    }
+    canvas.dataset.rtxCssPx = String(cssPx);
     canvas.style.width = `${cssPx}px`;
     canvas.style.height = `${cssPx}px`;
     canvas.style.display = "block";
     canvas.style.margin = "0 auto";
-    const px = Math.max(240, Math.floor(cssPx * Math.min(dpr, 2)));
     canvas.width = px;
     canvas.height = px;
   },
@@ -158,9 +163,9 @@ const HyperSpinWheel = {
           <div class="hyperspin-wheel-glow" aria-hidden="true"></div>
           <div class="hyperspin-wheel-rim" aria-hidden="true"></div>
           <div class="hyperspin-wheel-canvas-box">
+            <div class="hyperspin-wheel-pointer" aria-hidden="true"></div>
             <canvas id="${canvasId}" class="hyperspin-wheel-canvas" width="560" height="560" aria-label="Hyper Spin prize wheel"></canvas>
           </div>
-          <div class="hyperspin-wheel-pointer" aria-hidden="true"></div>
         </div>
         ${legend}
       </div>
@@ -203,18 +208,12 @@ const HyperSpinWheel = {
       wheel.stopAnimation(false);
     } catch (e) {}
 
-    wheel.rotationAngle = wheel.rotationAngle % 360;
+    let ra = Number(wheel.rotationAngle) || 0;
+    ra = ((ra % 360) + 360) % 360;
+    wheel.rotationAngle = ra;
 
     const segNum = winningIndex + 1;
     const stopAngle = wheel.getRandomForSegment(segNum);
-
-    console.log({
-      winningIndex,
-      winningLabel: segment.label,
-      stopAngle,
-      segNum,
-      canvasId
-    });
 
     wheel.animation.type = "spinToStop";
     wheel.animation.spins = 6;
@@ -222,6 +221,14 @@ const HyperSpinWheel = {
     wheel.animation.stopAngle = stopAngle;
     wheel.animation.easing = "Power3.easeOut";
     wheel.animation.callbackFinished = () => {
+      const indicated = typeof wheel.getIndicatedSegmentNumber === "function" ? wheel.getIndicatedSegmentNumber() : null;
+      if (indicated != null && indicated !== segNum) {
+        console.warn("[HyperSpinWheel] Pointer segment mismatch (payout still uses chosen segment)", {
+          chosenSegNum: segNum,
+          indicatedSegNum: indicated,
+          winningLabel: segment.label
+        });
+      }
       this.isAnimating = false;
       if (typeof onComplete === "function") onComplete();
     };

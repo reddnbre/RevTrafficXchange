@@ -78,6 +78,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Positioning context for pointer — must match Winwheel pointerAngle 0 (top of drawn circle). */
 }
 
 .hyperspin-wheel-canvas {
@@ -85,6 +86,8 @@
   max-width: 100%;
   height: auto;
   border-radius: 50%;
+  position: relative;
+  z-index: 1;
   box-shadow:
     0 14px 44px rgba(0, 0, 0, 0.6),
     inset 0 0 0 1px rgba(0, 0, 0, 0.35);
@@ -93,7 +96,7 @@
 .hyperspin-wheel-pointer {
   position: absolute;
   left: 50%;
-  top: 0;
+  top: -4px;
   transform: translateX(-50%);
   width: 0;
   height: 0;
