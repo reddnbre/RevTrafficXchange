@@ -826,40 +826,52 @@ const TextAdsDisplayUI = {
   }
 };
 
+const PUBLIC_TEXT_AD_DISPLAY_SLOTS = 8;
+const PUBLIC_BANNER_AD_DISPLAY_SLOTS = 8;
+
 function TextAdsDisplayPageComponent() {
   const ads = TextAdsDisplayUI.getActiveShuffledAds();
+  const slots = [];
+  for (let i = 0; i < PUBLIC_TEXT_AD_DISPLAY_SLOTS; i += 1) {
+    slots.push(ads[i] || null);
+  }
 
   return `
     <section class="text-ads-display-page">
       <header class="my-sites-header">
         <h1 class="my-sites-title">Text Ads</h1>
-        <p class="my-sites-subtitle">Discover opportunities from our members.</p>
+        <p class="my-sites-subtitle">Discover opportunities from our members. Empty slots open My Text Ads.</p>
       </header>
-      ${
-        ads.length
-          ? `
-            <div class="text-ads-grid">
-              ${ads
-                .map(
-                  (ad) => `
-                <article class="panel text-ad-card">
-                  <h3 class="text-ad-title">${escapeHtmlAttr(ad.title)}</h3>
-                  <p class="text-ad-desc">${escapeHtmlAttr(ad.description || "No description provided.")}</p>
-                  <button
-                    type="button"
-                    class="btn text-ad-link-btn"
-                    onclick="TextAdsDisplayUI.clickAd('${escapeJsSingleQuoted(ad.id)}', '${escapeJsSingleQuoted(ad.targetUrl)}')"
-                  >
-                    ${escapeHtmlAttr(ad.targetUrl)}
-                  </button>
-                </article>
-              `
-                )
-                .join("")}
-            </div>
-          `
-          : `<p class="my-sites-empty">No text ads available yet.</p>`
-      }
+      <div class="public-ad-slots-grid public-ad-slots-grid--text">
+        ${slots
+          .map((ad, idx) =>
+            ad
+              ? `
+          <article class="panel text-ad-card public-ad-slot public-ad-slot--filled">
+            <h3 class="text-ad-title">${escapeHtmlAttr(ad.title)}</h3>
+            <p class="text-ad-desc">${escapeHtmlAttr(ad.description || "No description provided.")}</p>
+            <button
+              type="button"
+              class="btn text-ad-link-btn"
+              onclick="TextAdsDisplayUI.clickAd('${escapeJsSingleQuoted(ad.id)}', '${escapeJsSingleQuoted(ad.targetUrl)}')"
+            >
+              ${escapeHtmlAttr(ad.targetUrl)}
+            </button>
+          </article>
+        `
+              : `
+          <button
+            type="button"
+            class="panel public-ad-slot public-ad-slot--placeholder public-ad-slot--text-placeholder"
+            aria-label="Slot ${idx + 1} empty. Go to My Text Ads to add your text ad."
+            onclick="App.navigate('my-text-ads')"
+          >
+            <span class="public-ad-slot-placeholder-text">Put your text here</span>
+          </button>
+        `
+          )
+          .join("")}
+      </div>
     </section>
   `;
 }
@@ -904,43 +916,52 @@ const BannerAdsDisplayUI = {
 
 function BannerAdsDisplayPageComponent() {
   const banners = BannerAdsDisplayUI.getActiveShuffledBanners();
+  const slots = [];
+  for (let i = 0; i < PUBLIC_BANNER_AD_DISPLAY_SLOTS; i += 1) {
+    slots.push(banners[i] || null);
+  }
 
   return `
-    <section class="text-ads-display-page">
+    <section class="text-ads-display-page banner-ads-display-page">
       <header class="my-sites-header">
         <h1 class="my-sites-title">Banner Ads</h1>
-        <p class="my-sites-subtitle">Explore promotions from our members.</p>
+        <p class="my-sites-subtitle">Explore promotions from our members. Empty slots open My Banner Ads.</p>
       </header>
-      ${
-        banners.length
-          ? `
-            <div class="banner-ads-grid">
-              ${banners
-                .map(
-                  (ad) => `
-                <article class="panel banner-ad-card">
-                  <button
-                    type="button"
-                    class="banner-ad-click-area"
-                    onclick="BannerAdsDisplayUI.clickBanner('${escapeJsSingleQuoted(ad.id)}', '${escapeJsSingleQuoted(ad.targetUrl)}')"
-                  >
-                    <img class="banner-ad-image" src="${escapeHtmlAttr(ad.imageUrl)}" alt="Member banner ad" loading="lazy" />
-                  </button>
-                  <button
-                    type="button"
-                    class="btn text-ad-link-btn"
-                    onclick="BannerAdsDisplayUI.clickBanner('${escapeJsSingleQuoted(ad.id)}', '${escapeJsSingleQuoted(ad.targetUrl)}')"
-                  >
-                    ${escapeHtmlAttr(ad.targetUrl)}
-                  </button>
-                </article>
-              `
-                )
-                .join("")}
-            </div>
-          `
-          : `<p class="my-sites-empty">No banner ads available yet.</p>`
-      }
+      <div class="public-ad-slots-grid public-ad-slots-grid--banner">
+        ${slots
+          .map((ad, idx) =>
+            ad
+              ? `
+          <article class="panel banner-ad-card public-ad-slot public-ad-slot--filled">
+            <button
+              type="button"
+              class="banner-ad-click-area"
+              onclick="BannerAdsDisplayUI.clickBanner('${escapeJsSingleQuoted(ad.id)}', '${escapeJsSingleQuoted(ad.targetUrl)}')"
+            >
+              <img class="banner-ad-image" src="${escapeHtmlAttr(ad.imageUrl)}" alt="Member banner ad" loading="lazy" />
+            </button>
+            <button
+              type="button"
+              class="btn text-ad-link-btn"
+              onclick="BannerAdsDisplayUI.clickBanner('${escapeJsSingleQuoted(ad.id)}', '${escapeJsSingleQuoted(ad.targetUrl)}')"
+            >
+              ${escapeHtmlAttr(ad.targetUrl)}
+            </button>
+          </article>
+        `
+              : `
+          <button
+            type="button"
+            class="panel public-ad-slot public-ad-slot--placeholder public-ad-slot--banner-placeholder"
+            aria-label="Slot ${idx + 1} empty. Go to My Banner Ads to add your banner."
+            onclick="App.navigate('my-banner-ads')"
+          >
+            <span class="public-ad-slot-placeholder-text">Put banner here</span>
+          </button>
+        `
+          )
+          .join("")}
+      </div>
     </section>
   `;
 }

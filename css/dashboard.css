@@ -700,6 +700,59 @@
   gap: 10px;
 }
 
+.public-ad-slots-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 720px) {
+  .public-ad-slots-grid--text {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .public-ad-slots-grid--banner {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.public-ad-slot--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  border: 2px dashed rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+  color: var(--muted);
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.public-ad-slot--placeholder:hover,
+.public-ad-slot--placeholder:focus-visible {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(251, 191, 36, 0.06);
+  color: #fde68a;
+  outline: none;
+}
+
+.public-ad-slot-placeholder-text {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.public-ad-slot--banner-placeholder {
+  min-height: 160px;
+}
+
 .text-ad-card {
   border-radius: 16px;
 }
