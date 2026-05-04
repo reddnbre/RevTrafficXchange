@@ -222,6 +222,52 @@
   flex-wrap: wrap;
 }
 
+.reward-ux-surf-strip--compact {
+  display: block;
+  padding: 5px 10px;
+  margin-bottom: 4px;
+  border-radius: 10px;
+}
+
+.reward-ux-surf-strip__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__label {
+  display: inline;
+  font-size: 0.58rem;
+  margin-right: 4px;
+  vertical-align: baseline;
+}
+
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__earnings,
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__session,
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__tier {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 4px;
+}
+
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__session {
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 72px;
+}
+
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__muted {
+  font-size: 0.72rem;
+}
+
+.reward-ux-surf-strip--compact .reward-ux-surf-strip__bar {
+  margin-top: 2px;
+  height: 4px;
+  min-width: 48px;
+}
+
 @media (max-width: 720px) {
   .reward-ux-surf-strip {
     grid-template-columns: 1fr 1fr;

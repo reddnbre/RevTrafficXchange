@@ -56,7 +56,7 @@ const RewardUX = {
     this.pulse("Session complete — Hyper Spin unlocked", "success");
   },
 
-  /** Confirmed = tallied in dailyActivity.creditsEarned; pending = credits still claimable this session (estimate). */
+  /** Banked = dailyActivity.creditsEarned; stillGettable = estimated credits from remaining session views (not in wallet until claimed). */
   getTodayCreditsBreakdown() {
     checkDailyReset();
     const daily = RTXState.user.dailyActivity || {};
@@ -205,9 +205,9 @@ const RewardUX = {
             <div class="reward-ux-card__label">Today’s traffic credits</div>
             <div class="reward-ux-card__hero">
               <span class="reward-ux-card__big">${credits.confirmed}</span>
-              <span class="reward-ux-card__suffix">confirmed</span>
+              <span class="reward-ux-card__suffix">banked today</span>
             </div>
-            <div class="reward-ux-card__sub">+${credits.pending} pending this session (if you finish)</div>
+            <div class="reward-ux-card__sub">+${credits.pending} more if you finish this run (not in wallet until claimed)</div>
             <div class="reward-ux-card__hint">${credits.remaining} views still on the board · +${credits.per} per claim</div>
           </div>
           <div class="reward-ux-card reward-ux-card--daily">
@@ -245,26 +245,31 @@ const RewardUX = {
     const credits = this.getTodayCreditsBreakdown();
     const sess = this.getSessionUrgency();
     const daily = this.getDailyTierProgressMeta();
-    const nudges = this.getNudgeLines();
-    const first = nudges[0] || "Keep claiming — every view stacks credits and daily score.";
+    const bankedTitle =
+      "Traffic credits already recorded today (wallet + daily tally). Not unpaid or unconfirmed; they are banked.";
+    const gettableTitle =
+      credits.remaining > 0
+        ? `Up to ${credits.pending} more credits if you claim all ${credits.remaining} remaining view(s) this session at +${credits.per} each. Not in your wallet until you claim.`
+        : "No credits left to earn in this session until you start a new one.";
     return `
-      <div class="reward-ux-surf-strip" role="region" aria-label="Session and earnings">
-        <div class="reward-ux-surf-strip__earnings">
-          <span class="reward-ux-surf-strip__label">Today</span>
-          <strong>${credits.confirmed}</strong><span class="reward-ux-surf-strip__muted"> confirmed</span>
-          <span class="reward-ux-surf-strip__dot">·</span>
-          <strong>+${credits.pending}</strong><span class="reward-ux-surf-strip__muted"> pending</span>
+      <div class="reward-ux-surf-strip reward-ux-surf-strip--compact" role="region" aria-label="Session and earnings">
+        <div class="reward-ux-surf-strip__row">
+          <div class="reward-ux-surf-strip__earnings" title="${this.esc(bankedTitle)}">
+            <span class="reward-ux-surf-strip__label">Today</span>
+            <strong>${credits.confirmed}</strong><span class="reward-ux-surf-strip__muted"> banked</span>
+            <span class="reward-ux-surf-strip__dot">·</span>
+            <strong>+${credits.pending}</strong><span class="reward-ux-surf-strip__muted"> if finish run</span>
+          </div>
+          <div class="reward-ux-surf-strip__session reward-ux-surf-strip__session--${sess.level}" title="${this.esc(gettableTitle)}">
+            <span class="reward-ux-surf-strip__label">Ses</span>
+            <strong>${sess.sv}</strong><span class="reward-ux-surf-strip__muted">/${sess.vps}</span>
+            <div class="reward-ux-surf-strip__bar"><div style="width:${sess.pct}%"></div></div>
+          </div>
+          <div class="reward-ux-surf-strip__tier" title="Daily activity tier (resets at calendar day)">
+            <span class="reward-ux-surf-strip__label">Tier</span>
+            <strong>${this.esc(daily.tierName)}</strong>
+          </div>
         </div>
-        <div class="reward-ux-surf-strip__session reward-ux-surf-strip__session--${sess.level}">
-          <span class="reward-ux-surf-strip__label">Session</span>
-          <strong>${sess.sv}</strong><span class="reward-ux-surf-strip__muted">/${sess.vps}</span>
-          <div class="reward-ux-surf-strip__bar"><div style="width:${sess.pct}%"></div></div>
-        </div>
-        <div class="reward-ux-surf-strip__tier" title="Daily activity tier">
-          <span class="reward-ux-surf-strip__label">Daily tier</span>
-          <strong>${this.esc(daily.tierName)}</strong>
-        </div>
-        <div class="reward-ux-surf-strip__nudge">${this.esc(first)}</div>
       </div>
     `;
   }

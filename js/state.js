@@ -107,7 +107,9 @@ const RTXState = {
   /** Simulated pool levels; adaptive release adjusts cycle/daily % only (revenue split unchanged). */
   rewardPoolAdaptive: {
     targetPoolBalance: 100000,
-    currentPoolBalance: 85000
+    currentPoolBalance: 0,
+    /** After first save, legacy 85k demo seed is cleared to 0 for pool testing. */
+    demoBaselineCleared: false
   },
 
   /**
@@ -635,16 +637,31 @@ function normalizeRewardPoolSettings() {
 }
 
 function normalizeRewardPoolAdaptive() {
-  const defaults = { targetPoolBalance: 100000, currentPoolBalance: 85000 };
+  const defaults = { targetPoolBalance: 100000, currentPoolBalance: 0 };
   const raw = RTXState.rewardPoolAdaptive && typeof RTXState.rewardPoolAdaptive === "object" ? RTXState.rewardPoolAdaptive : {};
   let target = Number(raw.targetPoolBalance);
   let current = Number(raw.currentPoolBalance);
   if (!Number.isFinite(target) || target <= 0) target = defaults.targetPoolBalance;
   if (!Number.isFinite(current) || current < 0) current = defaults.currentPoolBalance;
+  const legacyCleared = Boolean(raw.demoBaselineCleared);
+  if (!legacyCleared && Math.floor(current) === 85000) {
+    current = 0;
+  }
   RTXState.rewardPoolAdaptive = {
     targetPoolBalance: Math.max(1, Math.floor(target)),
-    currentPoolBalance: Math.max(0, Math.floor(current))
+    currentPoolBalance: Math.max(0, Math.floor(current)),
+    demoBaselineCleared: true
   };
+}
+
+/** Admin-only: zero simulated pool balance (does not change reward math formulas). */
+function resetSimulatedRewardPoolBalanceForAdminTest() {
+  if (!isAdminUser()) return false;
+  normalizeRewardPoolAdaptive();
+  RTXState.rewardPoolAdaptive.currentPoolBalance = 0;
+  RTXState.rewardPoolAdaptive.demoBaselineCleared = true;
+  RTXAdminPersist.save();
+  return true;
 }
 
 function normalizeRewardPoolTesting() {

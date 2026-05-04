@@ -53,7 +53,7 @@ const AdminBackOffice = {
   rewardPoolMessageTone: "neutral",
   rewardPoolAdaptiveDraft: {
     targetPoolBalance: "100000",
-    currentPoolBalance: "85000"
+    currentPoolBalance: "0"
   },
   miniGameDraft: {
     triggerBaseChance: "8",
@@ -155,7 +155,7 @@ const AdminBackOffice = {
   saveRewardPoolAdaptive() {
     const t = Math.max(1, Math.floor(Number(this.rewardPoolAdaptiveDraft.targetPoolBalance) || 1));
     const c = Math.max(0, Math.floor(Number(this.rewardPoolAdaptiveDraft.currentPoolBalance) || 0));
-    RTXState.rewardPoolAdaptive = { targetPoolBalance: t, currentPoolBalance: c };
+    RTXState.rewardPoolAdaptive = { targetPoolBalance: t, currentPoolBalance: c, demoBaselineCleared: true };
     if (typeof normalizeRewardPoolAdaptive === "function") {
       normalizeRewardPoolAdaptive();
     }
@@ -165,6 +165,18 @@ const AdminBackOffice = {
     this.syncRewardPoolAdaptiveFromState();
     this.rewardPoolMessage = "Pool levels saved (simulation). Release rates update from pool health.";
     this.rewardPoolMessageTone = "success";
+    App.render();
+  },
+
+  resetSimulatedPoolBalanceToZero() {
+    if (typeof resetSimulatedRewardPoolBalanceForAdminTest === "function" && resetSimulatedRewardPoolBalanceForAdminTest()) {
+      this.syncRewardPoolAdaptiveFromState();
+      this.rewardPoolMessage = "Simulated pool balance set to $0. Test purchases will move it from a clean baseline.";
+      this.rewardPoolMessageTone = "success";
+    } else {
+      this.rewardPoolMessage = "Reset failed (admin only, or helper unavailable).";
+      this.rewardPoolMessageTone = "error";
+    }
     App.render();
   },
 
@@ -491,6 +503,7 @@ const AdminBackOffice = {
         </div>
         <div class="admin-edit-actions">
           <button type="button" class="admin-action-btn" onclick="AdminBackOffice.saveRewardPoolAdaptive()">Save pool levels</button>
+          <button type="button" class="admin-action-btn" onclick="AdminBackOffice.resetSimulatedPoolBalanceToZero()">Reset simulated pool to $0</button>
         </div>
       </div>
       <div class="admin-reward-pool-form-wrap">

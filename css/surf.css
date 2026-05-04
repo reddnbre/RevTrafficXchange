@@ -7,6 +7,67 @@
   margin-top: 0;
 }
 
+.app-shell.hyper-mode .surf-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 4px;
+}
+
+.app-shell.hyper-mode .surf-viewer-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  padding: 2px;
+}
+
+.app-shell.hyper-mode .surf-browser-frame {
+  flex: 1;
+  min-height: 280px;
+  height: auto;
+}
+
+.app-shell.hyper-mode .surf-cmd-bar {
+  min-height: 48px;
+  max-height: none;
+  height: auto;
+  padding: 5px 10px;
+  margin-bottom: 4px;
+}
+
+.app-shell.hyper-mode .surf-cmd-logo-icon {
+  height: 34px;
+}
+
+.app-shell.hyper-mode .surf-cmd-logo-wordmark {
+  height: 20px;
+  max-width: 120px;
+}
+
+.app-shell.hyper-mode .surf-cmd-pill {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.app-shell.hyper-mode .surf-anti-cheat-row {
+  margin: 0 0 4px;
+}
+
+.app-shell.hyper-mode .surf-warning {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.app-shell.hyper-mode .surf-info-bar {
+  margin-top: 6px;
+  min-height: 0;
+  padding: 6px 8px;
+  flex-shrink: 0;
+}
+
 .surf-cmd-bar {
   max-height: 70px;
   min-height: 56px;
@@ -540,6 +601,11 @@
 @media (max-height: 700px) and (min-width: 900px) {
   .surf-browser-frame {
     height: 430px;
+  }
+
+  .app-shell.hyper-mode .surf-browser-frame {
+    height: auto;
+    min-height: 220px;
   }
 
   .surf-info-bar {
