@@ -1,216 +1,39 @@
-/* Hyper Spin — RTX glass wheel + static legend (single source: HyperSpin.rewards) */
+/* Hyper Spin — modal + page (no wheel; weighted draw from HyperSpin.rewards) */
 
-.rtx-hyper-wheel-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  margin: 8px 0 20px;
-}
-
-.rtx-hyper-wheel-ui {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  width: 100%;
-  max-width: 100%;
-}
-
-.rtx-hyper-wheel-stage {
-  position: relative;
-  width: min(560px, min(94vw, 88vmin));
-  max-width: 96vw;
-  aspect-ratio: 1;
-}
-
-.rtx-hyper-wheel-stage--compact {
-  width: min(440px, min(92vw, 78vmin));
-}
-
-.rtx-hyper-wheel-glow {
-  position: absolute;
-  inset: -8%;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 32%, rgba(249, 115, 22, 0.28) 0%, transparent 55%),
-    radial-gradient(circle at 50% 70%, rgba(59, 130, 246, 0.18) 0%, transparent 50%);
-  filter: blur(18px);
-  pointer-events: none;
-  z-index: 0;
-  animation: rtx-hyper-glow 3s ease-in-out infinite;
-}
-
-@keyframes rtx-hyper-glow {
-  0%,
-  100% {
-    opacity: 0.75;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-.rtx-hyper-ring {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.rtx-hyper-ring--outer {
-  inset: 0;
-  border-radius: 50%;
-  border: 3px solid rgba(249, 115, 22, 0.5);
-  box-shadow:
-    0 0 0 2px rgba(59, 130, 246, 0.35),
-    0 0 0 1px rgba(0, 0, 0, 0.55) inset,
-    0 0 36px rgba(249, 115, 22, 0.22),
-    0 0 52px rgba(59, 130, 246, 0.1);
-}
-
-.rtx-hyper-ring--inner {
-  inset: 5.5%;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
-}
-
-.rtx-hyper-wheel-frame {
-  position: absolute;
-  inset: 9%;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rtx-hyper-pointer {
-  position: absolute;
-  left: 50%;
-  top: -6px;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: clamp(16px, 3.8vw, 22px) solid transparent;
-  border-right: clamp(16px, 3.8vw, 22px) solid transparent;
-  border-top: clamp(26px, 5.5vw, 34px) solid #f97316;
-  filter: drop-shadow(0 4px 12px rgba(249, 115, 22, 0.6));
-  z-index: 8;
-  pointer-events: none;
-}
-
-.rtx-hyper-pointer::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 5px;
-  transform: translate(-50%, 0);
-  width: clamp(11px, 2.6vw, 15px);
-  height: clamp(11px, 2.6vw, 15px);
-  border-radius: 50%;
-  background: linear-gradient(180deg, #fef3c7, #fdba74);
-  box-shadow: 0 0 12px rgba(249, 115, 22, 0.85);
-}
-
-.rtx-hyper-disk-clip {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  overflow: hidden;
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.65),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.rtx-hyper-disk {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  position: relative;
-  transform-origin: 50% 50%;
-  will-change: transform;
-  background-size: 100% 100%;
-}
-
-.rtx-hyper-hub {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: clamp(52px, 14vw, 72px);
-  height: clamp(52px, 14vw, 72px);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(1.35rem, 5vw, 1.85rem);
-  line-height: 1;
-  background:
-    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.2), transparent 45%),
-    linear-gradient(160deg, #1a1510 0%, #0c0a08 100%);
-  border: 2px solid rgba(249, 115, 22, 0.45);
-  box-shadow:
-    0 0 0 1px rgba(59, 130, 246, 0.25),
-    0 8px 24px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  color: #fbbf24;
-  text-shadow: 0 0 14px rgba(251, 191, 36, 0.55);
-  pointer-events: none;
-}
-
-.rtx-hyper-legend {
+.rtx-hyper-prize-pool {
   list-style: none;
-  margin: 0;
-  padding: 0;
-  width: min(100%, 400px);
-  display: grid;
-  gap: 8px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
-.rtx-hyper-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.rtx-hyper-legend-item--active {
-  border-color: rgba(249, 115, 22, 0.5);
-  background: rgba(249, 115, 22, 0.14);
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
-}
-
-.rtx-hyper-legend-swatch {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35) inset;
-}
-
-.rtx-hyper-legend-label {
+.rtx-hyper-prize-pool li {
   font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--text, #fff);
-  line-height: 1.25;
+  font-weight: 600;
+  color: var(--muted, rgba(255, 255, 255, 0.72));
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.rtx-hyper-spinning-hint {
+.rtx-hyper-prize-pool li:last-child {
+  border-bottom: none;
+}
+
+.rtx-hyper-drawing-hint {
   font-size: 0.88rem;
   font-weight: 800;
   color: var(--orange, #f97316);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  animation: rtx-hyper-hint 1.1s ease-in-out infinite;
+  margin-bottom: 12px;
+  animation: rtx-hyper-drawing-pulse 1s ease-in-out infinite;
 }
 
-@keyframes rtx-hyper-hint {
+@keyframes rtx-hyper-drawing-pulse {
   0%,
   100% {
     opacity: 0.55;
@@ -221,7 +44,7 @@
 }
 
 .rtx-hyper-result-card {
-  margin-top: 6px;
+  margin: 8px 0 14px;
   padding: 18px 20px;
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(59, 130, 246, 0.08));
@@ -234,7 +57,6 @@
   line-height: 1.4;
 }
 
-/* Session modal — dark glass */
 .rtx-hyper-modal-overlay.modal-overlay {
   backdrop-filter: blur(10px);
 }
@@ -276,6 +98,6 @@
   align-items: stretch;
 }
 
-.hyperspin-panel .rtx-hyper-wheel-wrap {
+.hyperspin-panel .rtx-hyper-prize-pool {
   margin-top: 4px;
 }

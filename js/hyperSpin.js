@@ -1,9 +1,6 @@
 const HyperSpin = {
   premiumSpinCost: 10,
-  /**
-   * Wheel segment order (must match HyperSpinWheel CSS conic, clockwise from fixed top pointer):
-   * index 0 = first wedge from 0°, then clockwise.
-   */
+  /** Reward pool for weighted random draws (`pickWinningSegment`). */
   rewards: [
     { label: "+5 Credits", type: "credits", value: 5, weight: 35 },
     { label: "+10 Credits", type: "credits", value: 10, weight: 25 },

@@ -1598,16 +1598,16 @@ function SpotlightBookingPageComponent() {
 const HyperSpinPageUI = {
   lastReward: "",
   lastTone: "neutral",
-  _spinPick: null,
+  resolving: false,
+  _drawTimer: null,
 
   useSpin() {
-    if (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating) return;
+    if (this.resolving) return;
 
     const currentSpins = Math.max(0, Number(RTXState.user.hyperSpins) || 0);
     if (currentSpins <= 0) {
       this.lastReward = "No Hyper Spins available. Buy one from RevCoin Store.";
       this.lastTone = "error";
-      this._spinPick = null;
       App.render();
       return;
     }
@@ -1618,39 +1618,20 @@ const HyperSpinPageUI = {
     }
 
     const picked = HyperSpin.pickWinningSegment();
-    this._spinPick = picked;
     RTXState.user.hyperSpins = currentSpins - 1;
     RTXUserPersist.save();
+    this.resolving = true;
     App.render();
 
-    const runWheel = () => {
-      if (typeof HyperSpinWheel === "undefined" || !HyperSpinWheel.startSpin) {
-        HyperSpin.applyReward(picked.segment, true);
-        this._recordSpinSuccess(picked.segment);
-        this._spinPick = null;
-        RTXUserPersist.save();
-        App.render();
-        return;
-      }
-      HyperSpinWheel.startSpin({
-        diskId: "hyperspin-page-wheel-disk",
-        winningIndex: picked.winningIndex,
-        segment: picked.segment,
-        onComplete: () => {
-          HyperSpin.applyReward(picked.segment, true);
-          this._recordSpinSuccess(picked.segment);
-          this._spinPick = null;
-          RTXUserPersist.save();
-          App.render();
-        }
-      });
-    };
-
-    if (typeof queueMicrotask === "function") {
-      queueMicrotask(runWheel);
-    } else {
-      setTimeout(runWheel, 0);
-    }
+    if (this._drawTimer) clearTimeout(this._drawTimer);
+    this._drawTimer = setTimeout(() => {
+      this._drawTimer = null;
+      HyperSpin.applyReward(picked.segment, true);
+      this._recordSpinSuccess(picked.segment);
+      this.resolving = false;
+      RTXUserPersist.save();
+      App.render();
+    }, 550);
   },
 
   _recordSpinSuccess(reward) {
@@ -1669,14 +1650,13 @@ const HyperSpinPageUI = {
 function HyperSpinPageComponent() {
   const spins = Math.max(0, Number(RTXState.user.hyperSpins) || 0);
   const recentSpins = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
-  const wheelBusy = typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating;
-  const highlightIndex =
-    wheelBusy && HyperSpinPageUI._spinPick && typeof HyperSpinPageUI._spinPick.winningIndex === "number"
-      ? HyperSpinPageUI._spinPick.winningIndex
-      : null;
-  const wheelHtml =
-    typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML
-      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-page-wheel-disk", highlightIndex })
+  const busy = HyperSpinPageUI.resolving;
+  const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
+  const poolList =
+    segments.length > 0
+      ? `<ul class="rtx-hyper-prize-pool" aria-label="Possible rewards">${segments
+          .map((s) => `<li>${escapeHtmlAttr(s.label || "")}</li>`)
+          .join("")}</ul>`
       : "";
   return `
     <section class="revcoin-store-page">
@@ -1689,19 +1669,17 @@ function HyperSpinPageComponent() {
       </header>
 
       <section class="panel hyperspin-panel">
-        <h3>Spin the wheel</h3>
-        <p class="my-sites-subtitle">The prize is chosen first, then the wheel spins to match. Segment order follows the legend (top → clockwise).</p>
-        <div class="rtx-hyper-wheel-wrap">
-          ${wheelHtml}
-          ${wheelBusy ? `<div class="rtx-hyper-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
-        </div>
+        <h3>Draw a reward</h3>
+        <p class="my-sites-subtitle">Each spin uses weighted odds. Your reward is chosen when you tap draw.</p>
+        ${poolList}
+        ${busy ? `<div class="rtx-hyper-drawing-hint" aria-live="polite">Drawing reward…</div>` : ""}
         <button
           type="button"
           class="btn btn-primary hyperspin-spin-btn"
           onclick="HyperSpinPageUI.useSpin()"
-          ${spins > 0 && !wheelBusy ? "" : "disabled"}
+          ${spins > 0 && !busy ? "" : "disabled"}
         >
-          ${wheelBusy ? "Spinning…" : spins > 0 ? "Spin Now" : "No Spins Available"}
+          ${busy ? "Drawing…" : spins > 0 ? "Draw reward" : "No Spins Available"}
         </button>
         ${
           HyperSpinPageUI.lastReward && HyperSpinPageUI.lastTone === "success"

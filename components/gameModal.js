@@ -2,80 +2,59 @@ const GameModal = {
   currentReward: null,
   visible: false,
   animating: false,
-  _spinPick: null,
+  _drawTimer: null,
 
   showHyperSpin() {
+    if (this._drawTimer) {
+      clearTimeout(this._drawTimer);
+      this._drawTimer = null;
+    }
     this.visible = true;
     this.currentReward = null;
     this.animating = false;
-    this._spinPick = null;
-    if (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.resetModalWheel) {
-      HyperSpinWheel.resetModalWheel();
-    }
     App.render();
   },
 
   spin() {
-    if (this.animating || (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.isAnimating)) return;
+    if (this.animating) return;
     const picked = HyperSpin.pickWinningSegment();
-    this._spinPick = picked;
     this.animating = true;
     App.render();
-    const run = () => {
-      if (typeof HyperSpinWheel === "undefined" || !HyperSpinWheel.startSpin) {
-        HyperSpin.applyReward(picked.segment, true);
-        this.currentReward = picked.segment;
-        this.animating = false;
-        this._spinPick = null;
-        RTXUserPersist.save();
-        App.render();
-        return;
-      }
-      HyperSpinWheel.startSpin({
-        diskId: "hyperspin-modal-wheel-disk",
-        winningIndex: picked.winningIndex,
-        segment: picked.segment,
-        onComplete: () => {
-          HyperSpin.applyReward(picked.segment, true);
-          this.currentReward = picked.segment;
-          this.animating = false;
-          this._spinPick = null;
-          RTXUserPersist.save();
-          App.render();
-        }
-      });
+
+    const finish = () => {
+      this._drawTimer = null;
+      HyperSpin.applyReward(picked.segment, true);
+      this.currentReward = picked.segment;
+      this.animating = false;
+      RTXUserPersist.save();
+      App.render();
     };
-    if (typeof queueMicrotask === "function") {
-      queueMicrotask(run);
-    } else {
-      setTimeout(run, 0);
-    }
+
+    this._drawTimer = setTimeout(finish, 550);
   },
 
   close() {
+    if (this._drawTimer) {
+      clearTimeout(this._drawTimer);
+      this._drawTimer = null;
+    }
     this.visible = false;
     this.currentReward = null;
     this.animating = false;
-    this._spinPick = null;
     App.render();
   },
 
   render() {
     if (!this.visible) return "";
 
-    const wheelReady = typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML;
-    const highlightIndex =
-      this.animating && this._spinPick && typeof this._spinPick.winningIndex === "number"
-        ? this._spinPick.winningIndex
-        : null;
-    const wheelHtml = wheelReady
-      ? HyperSpinWheel.renderHTML({
-          diskId: "hyperspin-modal-wheel-disk",
-          highlightIndex
-        })
-      : "";
+    const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
+    const poolList =
+      segments.length && !this.currentReward
+        ? `<ul class="rtx-hyper-prize-pool" aria-label="Possible rewards">${segments
+            .map((s) => `<li>${typeof escapeHtmlAttr === "function" ? escapeHtmlAttr(s.label || "") : s.label || ""}</li>`)
+            .join("")}</ul>`
+        : "";
 
-    const showWheel = !this.currentReward;
     const spinning = this.animating;
 
     const wonLabel =
@@ -86,17 +65,14 @@ const GameModal = {
         <div class="modal rtx-hyper-modal">
           <h2>Hyper Spin Unlocked</h2>
           <p class="rtx-hyper-modal-sub">
-            Session complete. Spin the wheel for a bonus.
+            Session complete. Draw a random bonus from the pool below.
           </p>
 
+          ${poolList}
+
           ${
-            showWheel
-              ? `
-            <div class="rtx-hyper-wheel-wrap">
-              ${wheelHtml}
-              ${spinning ? `<div class="rtx-hyper-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
-            </div>
-          `
+            spinning
+              ? `<div class="rtx-hyper-drawing-hint" aria-live="polite">Drawing reward…</div>`
               : ""
           }
 
@@ -111,8 +87,8 @@ const GameModal = {
             this.currentReward
               ? `<button type="button" class="btn btn-primary" onclick="GameModal.close()">Continue Surfing</button>`
               : spinning
-              ? `<button type="button" class="btn btn-primary" disabled>Spinning…</button>`
-              : `<button type="button" class="btn btn-primary" onclick="GameModal.spin()">Spin Now</button>`
+              ? `<button type="button" class="btn btn-primary" disabled>Drawing…</button>`
+              : `<button type="button" class="btn btn-primary" onclick="GameModal.spin()">Draw reward</button>`
           }
           </div>
         </div>
