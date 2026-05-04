@@ -1594,6 +1594,53 @@ function handleBannerAdView(adId) {
 }
 
 /**
+ * Random member promo shown inside Surf: either a banner or text ad with remaining allocation.
+ * Returns null when no eligible ad exists.
+ */
+function getRandomSurfInlineMemberAd() {
+  normalizeMemberCampaigns();
+  const currentUserId = getCurrentUserId();
+  const hasRemaining = (item, usedKey) => {
+    const allocated = Math.max(0, Number(item && item.allocatedViews) || 0);
+    if (!allocated) return true;
+    const used = Math.max(0, Number(item && item[usedKey]) || 0);
+    return used < allocated;
+  };
+  const textAds = (RTXState.user.memberCampaigns.textAds || [])
+    .filter((ad) => ad.active && hasRemaining(ad, "views"))
+    .map((ad) => ({
+      type: "text",
+      id: String(ad.id),
+      ownerId: String(ad.ownerId || ""),
+      title: String(ad.title || "Member Text Ad"),
+      description: String(ad.description || ""),
+      targetUrl: String(ad.targetUrl || ""),
+      cta: "Open Offer"
+    }));
+  const bannerAds = (RTXState.user.memberCampaigns.bannerAds || [])
+    .filter((ad) => ad.active && hasRemaining(ad, "impressions"))
+    .map((ad) => ({
+      type: "banner",
+      id: String(ad.id),
+      ownerId: String(ad.ownerId || ""),
+      imageUrl: String(ad.imageUrl || ""),
+      targetUrl: String(ad.targetUrl || ""),
+      title: "Member Banner Ad",
+      cta: "Visit Sponsor"
+    }));
+
+  const pool = [...bannerAds, ...textAds].filter((ad) => {
+    if (!ad.targetUrl) return false;
+    // Prefer non-self ads; keep self ads as fallback for single-user demo.
+    return true;
+  });
+  if (!pool.length) return null;
+  const nonSelf = pool.filter((ad) => ad.ownerId && ad.ownerId !== currentUserId);
+  const pickFrom = nonSelf.length ? nonSelf : pool;
+  return pickFrom[Math.floor(Math.random() * pickFrom.length)] || null;
+}
+
+/**
  * Full user-facing daily rollover (calendar day changed).
  * Resets per-day surf / pool criteria fields only. Does not reset wallet credits, premium RevCoins,
  * loyalty score, hyper spin balance, streak, or session progress counters.

@@ -1,3 +1,45 @@
+.leaderboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.leaderboard-card h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.leaderboard-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
+}
+
+.leaderboard-row:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-rank {
+  color: var(--muted);
+}
+
+.leaderboard-score {
+  font-weight: 700;
+  color: #fdba74;
+}
+
+.leaderboard-you .leaderboard-name {
+  font-weight: 700;
+}
 .hero {
   border: 1px solid rgba(249,115,22,.32);
   background: rgba(0,0,0,.68);

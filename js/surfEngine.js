@@ -5,6 +5,10 @@ const SurfEngine = {
   antiCheatInitialized: false,
   campaignQueue: [],
   lastCampaignOwnerId: null,
+  inlinePromo: null,
+  inlinePromoViewSecondsLeft: 0,
+  inlinePromoViewTimer: null,
+  inlinePromoQualified: false,
   progressReminderTimer: null,
   pendingStartLoadTimeout: null,
 
@@ -69,6 +73,106 @@ const SurfEngine = {
       this.pendingStartLoadTimeout = null;
     }
     this.isRunning = false;
+  },
+
+  clearInlinePromoTimer() {
+    if (this.inlinePromoViewTimer) {
+      clearInterval(this.inlinePromoViewTimer);
+      this.inlinePromoViewTimer = null;
+    }
+  },
+
+  ensureInlinePromo() {
+    if (this.inlinePromo && this.inlinePromo.id) return this.inlinePromo;
+    if (typeof getRandomSurfInlineMemberAd !== "function") return null;
+    this.inlinePromo = getRandomSurfInlineMemberAd();
+    this.inlinePromoViewSecondsLeft = 0;
+    this.inlinePromoQualified = false;
+    return this.inlinePromo;
+  },
+
+  rotateInlinePromo() {
+    this.clearInlinePromoTimer();
+    this.inlinePromoViewSecondsLeft = 0;
+    this.inlinePromoQualified = false;
+    this.inlinePromo = typeof getRandomSurfInlineMemberAd === "function" ? getRandomSurfInlineMemberAd() : null;
+    this.updateInlinePromoUI();
+  },
+
+  startInlinePromoView(type, adId) {
+    const ad = this.ensureInlinePromo();
+    if (!ad || String(ad.id) !== String(adId) || String(ad.type) !== String(type) || this.inlinePromoQualified) return;
+    this.clearInlinePromoTimer();
+    this.inlinePromoViewSecondsLeft = 5;
+    this.updateInlinePromoUI();
+    this.inlinePromoViewTimer = setInterval(() => {
+      this.inlinePromoViewSecondsLeft = Math.max(0, this.inlinePromoViewSecondsLeft - 1);
+      this.updateInlinePromoUI();
+      if (this.inlinePromoViewSecondsLeft <= 0) {
+        this.clearInlinePromoTimer();
+        this.qualifyInlinePromoView();
+      }
+    }, 1000);
+  },
+
+  qualifyInlinePromoView() {
+    const ad = this.inlinePromo;
+    if (!ad || this.inlinePromoQualified) return;
+    this.inlinePromoQualified = true;
+    normalizeMemberCampaigns();
+    if (ad.type === "text") {
+      RTXState.user.memberCampaigns.textAds = RTXState.user.memberCampaigns.textAds.map((row) =>
+        String(row.id) === String(ad.id) ? { ...row, views: Math.max(0, Number(row.views) || 0) + 1 } : row
+      );
+      handleTextAdView(ad.id);
+    } else if (ad.type === "banner") {
+      RTXState.user.memberCampaigns.bannerAds = RTXState.user.memberCampaigns.bannerAds.map((row) =>
+        String(row.id) === String(ad.id) ? { ...row, impressions: Math.max(0, Number(row.impressions) || 0) + 1 } : row
+      );
+      handleBannerAdView(ad.id);
+    }
+    RTXUserPersist.save();
+    this.updateInlinePromoUI("Qualified +1 loyalty");
+  },
+
+  clickInlinePromo(type, adId, url) {
+    const ad = this.ensureInlinePromo();
+    if (!ad || String(ad.id) !== String(adId) || String(ad.type) !== String(type)) return;
+    const safe = String(url || "").trim();
+    if (safe) {
+      window.open(safe, "_blank", "noopener,noreferrer");
+    }
+    normalizeMemberCampaigns();
+    if (ad.type === "text") {
+      RTXState.user.memberCampaigns.textAds = RTXState.user.memberCampaigns.textAds.map((row) =>
+        String(row.id) === String(ad.id) ? { ...row, clicks: Math.max(0, Number(row.clicks) || 0) + 1 } : row
+      );
+    } else if (ad.type === "banner") {
+      RTXState.user.memberCampaigns.bannerAds = RTXState.user.memberCampaigns.bannerAds.map((row) =>
+        String(row.id) === String(ad.id) ? { ...row, clicks: Math.max(0, Number(row.clicks) || 0) + 1 } : row
+      );
+    }
+    RTXUserPersist.save();
+    this.startInlinePromoView(type, adId);
+  },
+
+  updateInlinePromoUI(statusText) {
+    if (RTXState.currentView !== "surf") return;
+    const stateNode = document.getElementById("surf-inline-promo-state");
+    if (!stateNode) return;
+    if (!this.inlinePromo) {
+      stateNode.textContent = "No member ad available right now.";
+      return;
+    }
+    if (this.inlinePromoQualified) {
+      stateNode.textContent = statusText || "Qualified +1 loyalty";
+      return;
+    }
+    if (this.inlinePromoViewSecondsLeft > 0) {
+      stateNode.textContent = `Viewing... ${this.inlinePromoViewSecondsLeft}s`;
+      return;
+    }
+    stateNode.textContent = "View or click ad, then stay 5s for +1 loyalty";
   },
 
   /** View timer length (seconds) — industry TEs commonly use ~8s visible exposure (e.g. Rotate5url-style surf). */
@@ -260,6 +364,7 @@ const SurfEngine = {
     }
 
     this.syncSurfCaptchaRow();
+    this.updateInlinePromoUI();
 
     return true;
   },
@@ -617,6 +722,7 @@ const SurfEngine = {
       RTXState.surfPaused = true;
       SessionSystem.completeSession();
       App.render();
+      this.rotateInlinePromo();
       this.triggerMiniGameMaybe(true);
       return;
     }
@@ -641,6 +747,7 @@ const SurfEngine = {
     this.lastCampaignOwnerId = selectedCampaign && selectedCampaign.ownerId ? String(selectedCampaign.ownerId) : null;
 
     this.triggerMiniGameMaybe(false);
+    this.rotateInlinePromo();
     this.startTimer();
   },
 

@@ -76,11 +76,19 @@ function getPreferredSpotlightBookingUrl() {
   return active ? normalizeMemberSiteUrlInput(active.url) : "";
 }
 
-function viewsFromCredits(credits) {
+function viewsFromSurfCredits(credits) {
+  return Math.max(0, Number(credits) || 0);
+}
+
+function creditsFromSurfViews(views) {
+  return Math.ceil(Math.max(0, Number(views) || 0));
+}
+
+function viewsFromAdCredits(credits) {
   return Math.max(0, Number(credits) || 0) * 10;
 }
 
-function creditsFromViews(views) {
+function creditsFromAdViews(views) {
   return Math.ceil(Math.max(0, Number(views) || 0) / 10);
 }
 
@@ -144,7 +152,7 @@ const MySitesUI = {
     this.draft = {
       url: site.url,
       active: site.active,
-      creditsAllocated: String(creditsFromViews(site.allocatedViews))
+      creditsAllocated: String(creditsFromSurfViews(site.allocatedViews))
     };
     this.lastError = "";
     App.render();
@@ -156,7 +164,7 @@ const MySitesUI = {
     const sites = RTXState.user.memberCampaigns.surfUrls;
     const url = normalizeMemberSiteUrlInput(this.draft.url);
     const draftCredits = Math.max(0, Number(this.draft.creditsAllocated) || 0);
-    const allocatedViews = viewsFromCredits(draftCredits);
+    const allocatedViews = viewsFromSurfCredits(draftCredits);
     const currentBalance = Math.max(0, Number(RTXState.user.credits) || 0);
     if (!url) {
       this.lastError = "Please enter a valid website URL.";
@@ -189,7 +197,7 @@ const MySitesUI = {
       RTXState.user.credits = currentBalance - draftCredits;
     } else if (this.mode === "edit" && this.editingId) {
       const existing = sites.find((s) => s.id === this.editingId);
-      const existingCredits = creditsFromViews(existing && existing.allocatedViews);
+      const existingCredits = creditsFromSurfViews(existing && existing.allocatedViews);
       const diff = draftCredits - existingCredits;
       if (diff > 0 && currentBalance < diff) {
         this.lastError = "Not enough credits to increase this site's view allocation.";
@@ -353,6 +361,7 @@ function MySitesPageComponent() {
         <div class="my-sites-plan-row">
           <span class="my-sites-plan-pill">Plan: ${planLabel}</span>
           <span class="my-sites-plan-pill">Sites Used: ${used} / ${limit}</span>
+          <span class="my-sites-plan-pill">Available Credits: ${Math.max(0, Math.floor(Number(RTXState.user.credits) || 0))}</span>
         </div>
       </header>
 
@@ -409,7 +418,7 @@ function MySitesPageComponent() {
             Active
           </label>
           <label class="my-sites-label">
-            Credits to allocate (1 credit = 10 views)
+            Credits to allocate (1 credit = 1 view)
             <input
               class="my-sites-input"
               type="number"
@@ -521,7 +530,7 @@ const MyTextAdsUI = {
       description: ad.description || "",
       targetUrl: ad.targetUrl,
       active: ad.active,
-      creditsAllocated: String(creditsFromViews(ad.allocatedViews))
+      creditsAllocated: String(creditsFromAdViews(ad.allocatedViews))
     };
     this.lastError = "";
     App.render();
@@ -535,7 +544,7 @@ const MyTextAdsUI = {
     const targetUrl = normalizeMemberSiteUrlInput(this.draft.targetUrl);
     const description = String(this.draft.description || "").trim();
     const draftCredits = Math.max(0, Number(this.draft.creditsAllocated) || 0);
-    const allocatedViews = viewsFromCredits(draftCredits);
+    const allocatedViews = viewsFromAdCredits(draftCredits);
     const currentBalance = Math.max(0, Number(RTXState.user.credits) || 0);
 
     if (!title) {
@@ -578,7 +587,7 @@ const MyTextAdsUI = {
       RTXState.user.credits = currentBalance - draftCredits;
     } else if (this.mode === "edit" && this.editingId) {
       const existing = ads.find((ad) => ad.id === this.editingId);
-      const existingCredits = creditsFromViews(existing && existing.allocatedViews);
+      const existingCredits = creditsFromAdViews(existing && existing.allocatedViews);
       const diff = draftCredits - existingCredits;
       if (diff > 0 && currentBalance < diff) {
         this.lastError = "Not enough credits to increase this ad allocation.";
@@ -657,6 +666,7 @@ function MyTextAdsPageComponent() {
         <div class="my-sites-plan-row">
           <span class="my-sites-plan-pill">Plan: ${planLabel}</span>
           <span class="my-sites-plan-pill">Ads Used: ${used} / ${limit}</span>
+          <span class="my-sites-plan-pill">Available Credits: ${Math.max(0, Math.floor(Number(RTXState.user.credits) || 0))}</span>
         </div>
       </header>
 
@@ -996,7 +1006,7 @@ const MyBannerAdsUI = {
       targetUrl: ad.targetUrl,
       size: ad.size || "300x250",
       active: ad.active,
-      creditsAllocated: String(creditsFromViews(ad.allocatedViews))
+      creditsAllocated: String(creditsFromAdViews(ad.allocatedViews))
     };
     this.lastError = "";
     App.render();
@@ -1012,7 +1022,7 @@ const MyBannerAdsUI = {
       ? this.draft.size
       : "300x250";
     const draftCredits = Math.max(0, Number(this.draft.creditsAllocated) || 0);
-    const allocatedViews = viewsFromCredits(draftCredits);
+    const allocatedViews = viewsFromAdCredits(draftCredits);
     const currentBalance = Math.max(0, Number(RTXState.user.credits) || 0);
 
     if (!imageUrl) {
@@ -1055,7 +1065,7 @@ const MyBannerAdsUI = {
       RTXState.user.credits = currentBalance - draftCredits;
     } else if (this.mode === "edit" && this.editingId) {
       const existing = ads.find((ad) => ad.id === this.editingId);
-      const existingCredits = creditsFromViews(existing && existing.allocatedViews);
+      const existingCredits = creditsFromAdViews(existing && existing.allocatedViews);
       const diff = draftCredits - existingCredits;
       if (diff > 0 && currentBalance < diff) {
         this.lastError = "Not enough credits to increase this banner allocation.";
@@ -1134,6 +1144,7 @@ function MyBannerAdsPageComponent() {
         <div class="my-sites-plan-row">
           <span class="my-sites-plan-pill">Plan: ${planLabel}</span>
           <span class="my-sites-plan-pill">Banners Used: ${used} / ${limit}</span>
+          <span class="my-sites-plan-pill">Available Credits: ${Math.max(0, Math.floor(Number(RTXState.user.credits) || 0))}</span>
         </div>
       </header>
 
@@ -1951,6 +1962,73 @@ function RewardsPageComponent() {
         <div class="rule">- Up to 150% maximum reward cap based on activity and pool availability.</div>
         <div class="rule">- No earnings are guaranteed.</div>
       </section>
+    </section>
+  `;
+}
+
+function LeaderboardPageComponent() {
+  normalizeLifetimeStats();
+  const currentId = String(RTXState.session && RTXState.session.currentUserId ? RTXState.session.currentUserId : "you");
+  const currentUserRow = {
+    id: currentId,
+    label: String(RTXState.user && RTXState.user.username ? `@${RTXState.user.username}` : currentId),
+    loyaltyScore: Math.max(0, Number(RTXState.user && RTXState.user.loyaltyScore) || 0),
+    credits: Math.max(0, Number(RTXState.user && RTXState.user.credits) || 0),
+    views: Math.max(0, Number(RTXState.user && RTXState.user.lifetimeStats && RTXState.user.lifetimeStats.validViews) || 0),
+    sessions: Math.max(0, Number(RTXState.user && RTXState.user.sessionsCompleted) || 0),
+    isYou: true
+  };
+  const adminUsers = Array.isArray(RTXState.admin && RTXState.admin.users) ? RTXState.admin.users : [];
+  const otherRows = adminUsers
+    .map((u) => ({
+      id: String(u && u.id ? u.id : ""),
+      label: String(u && u.email ? u.email : "member"),
+      loyaltyScore: Math.max(0, Number(u && u.loyaltyScore) || 0),
+      credits: Math.max(0, Number(u && u.credits) || 0),
+      views: 0,
+      sessions: 0,
+      isYou: false
+    }))
+    .filter((u) => u.id && u.id !== currentId);
+
+  const rows = [currentUserRow, ...otherRows];
+  const topLoyalty = [...rows].sort((a, b) => b.loyaltyScore - a.loyaltyScore);
+  const topCredits = [...rows].sort((a, b) => b.credits - a.credits);
+  const topViews = [...rows].sort((a, b) => b.views - a.views);
+
+  const renderList = (arr, field) =>
+    arr
+      .slice(0, 10)
+      .map(
+        (r, idx) => `
+      <li class="leaderboard-row ${r.isYou ? "leaderboard-you" : ""}">
+        <span class="leaderboard-rank">#${idx + 1}</span>
+        <span class="leaderboard-name">${escapeHtmlAttr(r.label)}${r.isYou ? " (You)" : ""}</span>
+        <span class="leaderboard-score">${Math.max(0, Number(r[field]) || 0)}</span>
+      </li>`
+      )
+      .join("");
+
+  return `
+    <section class="my-sites-page leaderboard-page">
+      <header class="my-sites-header">
+        <h1 class="my-sites-title">Leaderboards</h1>
+        <p class="my-sites-subtitle">Top members by loyalty, credits, and surf activity.</p>
+      </header>
+      <div class="leaderboard-grid">
+        <article class="panel leaderboard-card">
+          <h3>Loyalty Score</h3>
+          <ol class="leaderboard-list">${renderList(topLoyalty, "loyaltyScore")}</ol>
+        </article>
+        <article class="panel leaderboard-card">
+          <h3>Credits Balance</h3>
+          <ol class="leaderboard-list">${renderList(topCredits, "credits")}</ol>
+        </article>
+        <article class="panel leaderboard-card">
+          <h3>Lifetime Surf Views</h3>
+          <ol class="leaderboard-list">${renderList(topViews, "views")}</ol>
+        </article>
+      </div>
     </section>
   `;
 }

@@ -733,3 +733,61 @@
     padding: 8px 10px;
   }
 }
+
+.surf-inline-promo {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 6px 4px;
+}
+
+.surf-inline-promo-head {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.surf-inline-promo-banner-btn {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.surf-inline-promo-banner-img {
+  width: 100%;
+  max-height: 96px;
+  object-fit: contain;
+  display: block;
+}
+
+.surf-inline-promo-text-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.surf-inline-promo-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.surf-inline-promo-desc {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.surf-inline-promo-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.surf-inline-promo-state {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}

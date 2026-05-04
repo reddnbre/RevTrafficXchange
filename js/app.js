@@ -351,6 +351,7 @@ const App = {
       <nav class="main-nav" aria-label="Main">
         <button type="button" class="main-nav-link ${v === "dashboard" ? "active" : ""}" onclick="App.navigate('dashboard')">Dashboard</button>
         <button type="button" class="main-nav-link ${v === "member-stats" ? "active" : ""}" onclick="App.navigate('member-stats')">My Stats</button>
+        <button type="button" class="main-nav-link ${v === "leaderboard" ? "active" : ""}" onclick="App.navigate('leaderboard')">Leaderboard</button>
         <button type="button" class="main-nav-link ${v === "surf" ? "active" : ""}" onclick="App.navigate('surf')">Surf</button>
         <button type="button" class="main-nav-link ${v === "spotlight-booking" ? "active" : ""}" onclick="App.navigate('spotlight-booking')">Spotlight</button>
 
@@ -430,6 +431,7 @@ const App = {
     if (RTXState.currentView === "admin") return AdminPageComponent();
     if (RTXState.currentView === "dashboard") return DashboardComponent();
     if (RTXState.currentView === "member-stats") return MemberStatsPageComponent();
+    if (RTXState.currentView === "leaderboard") return LeaderboardPageComponent();
     if (RTXState.currentView === "my-sites") return MySitesPageComponent();
     if (RTXState.currentView === "my-text-ads") return MyTextAdsPageComponent();
     if (RTXState.currentView === "text-ads-display") return TextAdsDisplayPageComponent();

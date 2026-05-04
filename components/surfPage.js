@@ -28,6 +28,18 @@ function SurfPageComponent() {
   const boostPct = Math.max(0, Math.round((activityMultiplier - 1) * 100));
   const boostTimeLeft = typeof getBoostTimeLeftText === "function" ? getBoostTimeLeftText() : "";
   const boostLabel = boostPct > 0 ? `+${boostPct}%${boostTimeLeft ? ` (${boostTimeLeft})` : ""}` : "+0%";
+  const inlinePromo =
+    typeof SurfEngine !== "undefined" && SurfEngine && typeof SurfEngine.ensureInlinePromo === "function"
+      ? SurfEngine.ensureInlinePromo()
+      : null;
+  const esc = (v) =>
+    String(v || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  const promoId = inlinePromo ? String(inlinePromo.id).replace(/'/g, "\\'") : "";
+  const promoUrlJs = inlinePromo ? String(inlinePromo.targetUrl).replace(/'/g, "\\'") : "";
 
   const creditsWalletTitle =
     typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.getSurfCreditsWalletTooltip === "function"
@@ -100,6 +112,30 @@ function SurfPageComponent() {
               referrerpolicy="no-referrer"
             ></iframe>
           </div>
+        </div>
+        <div class="surf-inline-promo">
+          ${
+            inlinePromo
+              ? `
+            <div class="surf-inline-promo-head">Member ${inlinePromo.type === "banner" ? "Banner" : "Text"} Ad</div>
+            ${
+              inlinePromo.type === "banner"
+                ? `<button type="button" class="surf-inline-promo-banner-btn" onclick="SurfEngine.clickInlinePromo('banner','${promoId}','${promoUrlJs}')">
+                    <img class="surf-inline-promo-banner-img" src="${esc(inlinePromo.imageUrl)}" alt="Member banner ad" loading="lazy" />
+                  </button>`
+                : `<div class="surf-inline-promo-text-card">
+                    <div class="surf-inline-promo-title">${esc(inlinePromo.title || "Member text ad")}</div>
+                    <div class="surf-inline-promo-desc">${esc(inlinePromo.description || "")}</div>
+                  </div>`
+            }
+            <div class="surf-inline-promo-actions">
+              <button type="button" class="btn" onclick="SurfEngine.startInlinePromoView('${inlinePromo.type}','${promoId}')">Start 5s View</button>
+              <button type="button" class="btn btn-primary" onclick="SurfEngine.clickInlinePromo('${inlinePromo.type}','${promoId}','${promoUrlJs}')">${esc(inlinePromo.cta || "Open Offer")}</button>
+            </div>
+            <div class="surf-inline-promo-state" id="surf-inline-promo-state">View or click ad, then stay 5s for +1 loyalty</div>
+          `
+              : `<div class="surf-inline-promo-state" id="surf-inline-promo-state">No member ad available right now.</div>`
+          }
         </div>
       </section>
 
