@@ -77,7 +77,7 @@ function SurfPageComponent() {
           <div class="surf-captcha-box">
             <div class="surf-captcha-label">${anti.captchaPrompt}</div>
             <input id="surf-captcha-answer" class="surf-captcha-input" type="text" inputmode="numeric" placeholder="Answer" />
-            <button class="btn btn-primary surf-captcha-btn" onclick="SurfEngine.verifyCaptcha()">Verify</button>
+            <button type="button" class="btn btn-primary surf-captcha-btn" onclick="SurfEngine.verifyCaptcha()">Verify</button>
           </div>
         ` : ""}
       </div>

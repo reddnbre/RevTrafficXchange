@@ -123,6 +123,43 @@ const SurfEngine = {
     return true;
   },
 
+  _escapeSurfCaptchaText(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/"/g, "&quot;");
+  },
+
+  /** Keep CAPTCHA markup in sync when we avoid full `App.render()` (iframe-preserving patches). */
+  syncSurfCaptchaRow() {
+    if (RTXState.currentView !== "surf") return;
+    const anti = RTXState.antiCheat;
+    const row = document.querySelector(".surf-anti-cheat-row");
+    if (!row) return;
+    const existingBox = row.querySelector(".surf-captcha-box");
+    const needBox = Boolean(anti.captchaRequired && !anti.captchaSolved);
+
+    if (needBox && !existingBox) {
+      row.insertAdjacentHTML(
+        "beforeend",
+        `<div class="surf-captcha-box">
+            <div class="surf-captcha-label">${this._escapeSurfCaptchaText(anti.captchaPrompt)}</div>
+            <input id="surf-captcha-answer" class="surf-captcha-input" type="text" inputmode="numeric" placeholder="Answer" autocomplete="off" />
+            <button type="button" class="btn btn-primary surf-captcha-btn" onclick="SurfEngine.verifyCaptcha()">Verify</button>
+          </div>`
+      );
+      return;
+    }
+    if (!needBox && existingBox) {
+      existingBox.remove();
+      return;
+    }
+    if (needBox && existingBox) {
+      const label = existingBox.querySelector(".surf-captcha-label");
+      if (label) label.textContent = anti.captchaPrompt || "";
+    }
+  },
+
   patchSurfRuntimeUI() {
     if (!this.canPatchSurfDom()) return false;
 
@@ -212,6 +249,8 @@ const SurfEngine = {
         stripRoot.outerHTML = nextStrip;
       }
     }
+
+    this.syncSurfCaptchaRow();
 
     return true;
   },
@@ -356,25 +395,47 @@ const SurfEngine = {
 
   verifyCaptcha() {
     const anti = RTXState.antiCheat;
-    const input = document.getElementById("surf-captcha-answer");
-    if (!input) return;
+    let input = document.getElementById("surf-captcha-answer");
+    if (!input) {
+      if (anti.captchaRequired && !anti.captchaSolved) {
+        this.syncSurfCaptchaRow();
+        input = document.getElementById("surf-captcha-answer");
+      }
+    }
+    if (!input) {
+      if (typeof App !== "undefined" && App && typeof App.render === "function") {
+        App.render();
+      }
+      return;
+    }
 
-    const answer = Number(input.value.trim());
-    if (answer === anti.captchaAnswer) {
+    const raw = String(input.value || "").trim();
+    if (raw === "") {
+      const message = "Enter your answer, then tap Verify.";
+      this.setAntiCheatStatus(message);
+      this.showAntiCheatPopup(message);
+      return;
+    }
+
+    const answer = Number(raw);
+    const expected = Number(anti.captchaAnswer);
+    const ok = Number.isFinite(answer) && Number.isFinite(expected) && answer === expected;
+
+    if (ok) {
       anti.captchaSolved = true;
       anti.captchaRequired = false;
       this.setAntiCheatStatus("");
+      this.dismissAntiCheatPopup();
+      if (!this.refreshSurfIfLive()) {
+        if (typeof App !== "undefined" && App && typeof App.render === "function") {
+          App.render();
+        }
+      }
     } else {
       anti.captchaSolved = false;
       const message = "Incorrect CAPTCHA answer. Try again.";
       this.setAntiCheatStatus(message);
       this.showAntiCheatPopup(message);
-    }
-
-    if (!this.refreshSurfIfLive()) {
-      if (typeof App !== "undefined" && App && typeof App.render === "function") {
-        App.render();
-      }
     }
   },
 
