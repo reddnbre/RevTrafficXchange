@@ -223,12 +223,18 @@ const RewardUX = {
             <div class="reward-ux-pool-test-log__title">Recent simulated pool funding (admin testing)</div>
             <ul>${contribs
               .map(
-                (row) =>
-                  `<li><span class="reward-ux-pool-test-log__amt">+$${Math.round(Number(row.dollars) * 100) / 100}</span> · ${this.esc(
+                (row) => {
+                  const ps = Number(row.platformDollars);
+                  const rs = Number(row.reserveDollars);
+                  const pl = Number(row.poolDollars);
+                  const splitHint =
+                    [ps, rs, pl].every((x) => Number.isFinite(x))
+                      ? ` · split: pool +$${pl.toFixed(2)}, site +$${ps.toFixed(2)}, reserve +$${rs.toFixed(2)}`
+                      : "";
+                  return `<li><span class="reward-ux-pool-test-log__amt">+$${Math.round(Number(row.dollars) * 100) / 100}</span> · ${this.esc(
                     row.label || ""
-                  )} · <span class="reward-ux-pool-test-log__time">${this.esc(
-                    row.ts ? new Date(row.ts).toLocaleString() : ""
-                  )}</span></li>`
+                  )}${splitHint} · <span class="reward-ux-pool-test-log__time">${this.esc(row.ts ? new Date(row.ts).toLocaleString() : "")}</span></li>`;
+                }
               )
               .join("")}</ul>
           </div>`

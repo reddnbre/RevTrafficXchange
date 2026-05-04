@@ -55,6 +55,13 @@ const AdminBackOffice = {
     targetPoolBalance: "100000",
     currentPoolBalance: "0"
   },
+  /** Simulated treasury withdrawals (site / reserve only). */
+  treasuryWithdrawDraft: {
+    platformAmount: "",
+    platformNote: "",
+    reserveAmount: "",
+    reserveNote: ""
+  },
   miniGameDraft: {
     triggerBaseChance: "8",
     triggerSessionChance: "25",
@@ -103,6 +110,7 @@ const AdminBackOffice = {
       this.rewardPoolMessageTone = "neutral";
       this.syncRewardPoolDraftFromState();
       this.syncRewardPoolAdaptiveFromState();
+      this.resetTreasuryWithdrawDraft();
     }
     if (tabId === "miniGames") {
       this.miniGameMessage = "";
@@ -176,6 +184,46 @@ const AdminBackOffice = {
     } else {
       this.rewardPoolMessage = "Reset failed (admin only, or helper unavailable).";
       this.rewardPoolMessageTone = "error";
+    }
+    App.render();
+  },
+
+  resetTreasuryWithdrawDraft() {
+    this.treasuryWithdrawDraft = {
+      platformAmount: "",
+      platformNote: "",
+      reserveAmount: "",
+      reserveNote: ""
+    };
+  },
+
+  updateTreasuryWithdrawDraft(field, value) {
+    if (!this.treasuryWithdrawDraft) this.resetTreasuryWithdrawDraft();
+    this.treasuryWithdrawDraft[field] = value;
+    App.render();
+  },
+
+  withdrawRevenueTreasury(bucket) {
+    if (typeof withdrawFromAdminRevenueTreasury !== "function") {
+      this.rewardPoolMessage = "Withdraw helper unavailable.";
+      this.rewardPoolMessageTone = "error";
+      App.render();
+      return;
+    }
+    const d = this.treasuryWithdrawDraft || {};
+    const amount = bucket === "reserve" ? d.reserveAmount : d.platformAmount;
+    const note = bucket === "reserve" ? d.reserveNote : d.platformNote;
+    const res = withdrawFromAdminRevenueTreasury(bucket, amount, note);
+    this.rewardPoolMessage = res.message;
+    this.rewardPoolMessageTone = res.ok ? "success" : "error";
+    if (res.ok) {
+      if (bucket === "reserve") {
+        d.reserveAmount = "";
+        d.reserveNote = "";
+      } else {
+        d.platformAmount = "";
+        d.platformNote = "";
+      }
     }
     App.render();
   },
@@ -352,7 +400,7 @@ const AdminBackOffice = {
     if (typeof applyAdminTestMembership !== "function") return;
     const ok = applyAdminTestMembership("upgraded");
     this.systemHealthMessage = ok
-      ? "Membership set to Upgraded (test). $10 simulated into reward pool + qualified spend."
+      ? "Membership set to Upgraded (test). $10 simulated revenue split (site / reserve / pool) + qualified spend."
       : "Action blocked.";
     this.systemHealthMessageTone = ok ? "success" : "error";
     App.render();
@@ -479,9 +527,83 @@ const AdminBackOffice = {
         ? (ad.poolHealthRatio * 100).toFixed(1) + "%"
         : "—";
     const adraft = this.rewardPoolAdaptiveDraft;
+    if (typeof normalizeAdminRevenueTreasury === "function") {
+      normalizeAdminRevenueTreasury();
+    }
+    const tre = (RTXState.admin && RTXState.admin.revenueTreasury) || {};
+    const twd = this.treasuryWithdrawDraft || {};
+    const memberPoolBal =
+      preview.adaptive && typeof preview.adaptive.currentPoolBalance === "number"
+        ? preview.adaptive.currentPoolBalance
+        : Math.max(0, Math.floor(Number((RTXState.rewardPoolAdaptive || {}).currentPoolBalance) || 0));
+    const treasuryRows = `
+      <div class="admin-revenue-treasury panel">
+        <h4>Treasury balances (simulated)</h4>
+        <p class="admin-revenue-treasury-muted">Local ledger only — not banking. Simulated purchases split revenue into <strong>site (admin)</strong>, <strong>reserve (ops)</strong>, and the <strong>member reward pool</strong> using the percentages below. You can record withdrawals from site and reserve when you pay yourself or cover hosting; the member pool is not withdrawn here.</p>
+        <div class="admin-revenue-treasury-grid">
+          <div class="admin-revenue-treasury-card">
+            <div class="admin-revenue-treasury-card-title">Site / admin earnings</div>
+            <div class="admin-revenue-treasury-balance">${fmt(Number(tre.platformBalance) || 0)}</div>
+            <div class="admin-revenue-treasury-withdraw">
+              <label>
+                Amount
+                <input type="number" min="0" step="0.01" placeholder="0.00" value="${String(twd.platformAmount ?? "").replace(/"/g, "&quot;")}" oninput="AdminBackOffice.updateTreasuryWithdrawDraft('platformAmount', this.value)" />
+              </label>
+              <label>
+                Note (optional)
+                <input type="text" maxlength="200" placeholder="e.g. owner draw" value="${String(twd.platformNote ?? "").replace(/"/g, "&quot;")}" oninput="AdminBackOffice.updateTreasuryWithdrawDraft('platformNote', this.value)" />
+              </label>
+              <button type="button" class="admin-action-btn" onclick="AdminBackOffice.withdrawRevenueTreasury('platform')">Record withdrawal</button>
+            </div>
+          </div>
+          <div class="admin-revenue-treasury-card">
+            <div class="admin-revenue-treasury-card-title">Reserve (maintenance)</div>
+            <div class="admin-revenue-treasury-balance">${fmt(Number(tre.reserveBalance) || 0)}</div>
+            <div class="admin-revenue-treasury-withdraw">
+              <label>
+                Amount
+                <input type="number" min="0" step="0.01" placeholder="0.00" value="${String(twd.reserveAmount ?? "").replace(/"/g, "&quot;")}" oninput="AdminBackOffice.updateTreasuryWithdrawDraft('reserveAmount', this.value)" />
+              </label>
+              <label>
+                Note (optional)
+                <input type="text" maxlength="200" placeholder="e.g. hosting invoice" value="${String(twd.reserveNote ?? "").replace(/"/g, "&quot;")}" oninput="AdminBackOffice.updateTreasuryWithdrawDraft('reserveNote', this.value)" />
+              </label>
+              <button type="button" class="admin-action-btn" onclick="AdminBackOffice.withdrawRevenueTreasury('reserve')">Record withdrawal</button>
+            </div>
+          </div>
+          <div class="admin-revenue-treasury-card admin-revenue-treasury-card-readonly">
+            <div class="admin-revenue-treasury-card-title">Member reward pool</div>
+            <div class="admin-revenue-treasury-balance">${fmt(memberPoolBal)}</div>
+            <p class="admin-revenue-treasury-hint">Funded from the reward-pool share of revenue. Same figure as current pool balance below (integer dollars in this simulation). Not withdrawable here for admin—reserved for member payouts via release rules.</p>
+          </div>
+        </div>
+        ${
+          Array.isArray(tre.withdrawalLog) && tre.withdrawalLog.length
+            ? `<div class="admin-revenue-treasury-log">
+                <h5>Recent recorded withdrawals</h5>
+                <ul class="admin-revenue-treasury-log-list">
+                  ${tre.withdrawalLog
+                    .slice(0, 8)
+                    .map(
+                      (w) => {
+                        const noteEsc = String(w.note || "")
+                          .replace(/&/g, "&amp;")
+                          .replace(/</g, "&lt;")
+                          .replace(/>/g, "&gt;");
+                        return `<li><span class="admin-revenue-treasury-log-amt">$${Number(w.amount).toFixed(2)}</span> <span class="admin-revenue-treasury-log-bucket">${w.bucket === "reserve" ? "reserve" : "site"}</span> <span class="admin-revenue-treasury-log-note">${noteEsc}</span></li>`;
+                      }
+                    )
+                    .join("")}
+                </ul>
+              </div>`
+            : ""
+        }
+      </div>
+    `;
     return `
       <h3>Reward Pool Controls</h3>
       <p>Adjust <strong>revenue split</strong> (platform / reserve / reward pool) below. Platform and reserve shares are fixed by those percents. <strong>Cycle and daily release</strong> fields are reference values only—live release rates self-adjust from pool health (current vs target balance) and do not change the revenue split.</p>
+      ${treasuryRows}
       <div class="admin-reward-pool-adaptive panel">
         <h4>Pool health &amp; adaptive release</h4>
         <p class="admin-reward-pool-adaptive-muted">Simulated balances (local only). Ratio = current ÷ target.</p>

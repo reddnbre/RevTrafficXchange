@@ -195,6 +195,15 @@ const RTXState = {
     revenuePreview: {
       simulatedRevenue: 100,
       notes: ""
+    },
+    /**
+     * Simulated ledger: where test “revenue” lands after split (admin site share, ops reserve).
+     * Member reward pool balance lives in rewardPoolAdaptive.currentPoolBalance.
+     */
+    revenueTreasury: {
+      platformBalance: 0,
+      reserveBalance: 0,
+      withdrawalLog: []
     }
   },
   surfPaused: false,
@@ -503,11 +512,20 @@ const RTXAdminPersist = {
         const rawC = data.rewardPoolTesting.contributions;
         const contributions = Array.isArray(rawC)
           ? rawC
-              .map((row) => ({
-                ts: Math.max(0, Number(row.ts) || 0),
-                dollars: Math.max(0, Number(row.dollars) || 0),
-                label: String(row.label || "").slice(0, 200)
-              }))
+              .map((row) => {
+                const dollars = Math.max(0, Number(row.dollars) || 0);
+                const out = {
+                  ts: Math.max(0, Number(row.ts) || 0),
+                  dollars,
+                  label: String(row.label || "").slice(0, 200)
+                };
+                if (row.platformDollars != null && row.reserveDollars != null && row.poolDollars != null) {
+                  out.platformDollars = Number(row.platformDollars);
+                  out.reserveDollars = Number(row.reserveDollars);
+                  out.poolDollars = Number(row.poolDollars);
+                }
+                return out;
+              })
               .filter((row) => row.dollars > 0 && row.ts > 0)
               .slice(0, 20)
           : [];
@@ -520,6 +538,10 @@ const RTXAdminPersist = {
 
       if (data.revenuePreview && typeof data.revenuePreview === "object") {
         RTXState.admin.revenuePreview = { ...RTXState.admin.revenuePreview, ...data.revenuePreview };
+      }
+
+      if (data.revenueTreasury && typeof data.revenueTreasury === "object") {
+        RTXState.admin.revenueTreasury = { ...RTXState.admin.revenueTreasury, ...data.revenueTreasury };
       }
     } catch (e) {
       /* ignore corrupt storage */
@@ -538,7 +560,8 @@ const RTXAdminPersist = {
           rewardPoolAdaptive: RTXState.rewardPoolAdaptive,
           rewardPoolTesting: RTXState.rewardPoolTesting,
           miniGameSettings: RTXState.miniGameSettings,
-          revenuePreview: RTXState.admin.revenuePreview
+          revenuePreview: RTXState.admin.revenuePreview,
+          revenueTreasury: RTXState.admin.revenueTreasury
         })
       );
     } catch (e) {
@@ -549,6 +572,12 @@ const RTXAdminPersist = {
 
 RTXAdminPersist.load();
 normalizeRewardPoolTesting();
+
+function roundMoney2(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 0;
+  return Math.round(Math.max(0, v) * 100) / 100;
+}
 
 function normalizeAdminRevenuePreview() {
   if (!RTXState.admin || typeof RTXState.admin !== "object") return;
@@ -563,6 +592,27 @@ function normalizeAdminRevenuePreview() {
 }
 
 normalizeAdminRevenuePreview();
+
+function normalizeAdminRevenueTreasury() {
+  if (!RTXState.admin || typeof RTXState.admin !== "object") return;
+  const raw = RTXState.admin.revenueTreasury && typeof RTXState.admin.revenueTreasury === "object" ? RTXState.admin.revenueTreasury : {};
+  const log = Array.isArray(raw.withdrawalLog) ? raw.withdrawalLog : [];
+  RTXState.admin.revenueTreasury = {
+    platformBalance: roundMoney2(raw.platformBalance),
+    reserveBalance: roundMoney2(raw.reserveBalance),
+    withdrawalLog: log
+      .map((row) => ({
+        ts: Math.max(0, Number(row.ts) || 0),
+        bucket: row.bucket === "reserve" ? "reserve" : "platform",
+        amount: roundMoney2(row.amount),
+        note: String(row.note || "").slice(0, 200)
+      }))
+      .filter((row) => row.amount > 0 && row.ts > 0)
+      .slice(0, 30)
+  };
+}
+
+normalizeAdminRevenueTreasury();
 
 function normalizeMiniGameSettings() {
   const defaults = {
@@ -669,11 +719,20 @@ function normalizeRewardPoolTesting() {
   const c = Array.isArray(raw.contributions) ? raw.contributions : [];
   RTXState.rewardPoolTesting = {
     contributions: c
-      .map((row) => ({
-        ts: Math.max(0, Number(row.ts) || 0),
-        dollars: Math.max(0, Number(row.dollars) || 0),
-        label: String(row.label || "").slice(0, 200)
-      }))
+      .map((row) => {
+        const dollars = Math.max(0, Number(row.dollars) || 0);
+        const out = {
+          ts: Math.max(0, Number(row.ts) || 0),
+          dollars,
+          label: String(row.label || "").slice(0, 200)
+        };
+        if (row.platformDollars != null && row.reserveDollars != null && row.poolDollars != null) {
+          out.platformDollars = roundMoney2(row.platformDollars);
+          out.reserveDollars = roundMoney2(row.reserveDollars);
+          out.poolDollars = roundMoney2(row.poolDollars);
+        }
+        return out;
+      })
       .filter((row) => row.dollars > 0 && row.ts > 0)
       .slice(0, 20)
   };
@@ -691,31 +750,93 @@ function getSimulatedDollarsForTestCoinGrant(coinsAdded) {
 }
 
 /**
+ * Split a simulated revenue dollar amount using platform / reserve / reward-pool weights.
+ * If weights sum to 0, the full amount is treated as reward-pool contribution only.
+ * @returns {{ platform: number, reserve: number, pool: number }}
+ */
+function splitSimulatedRevenueAcrossTreasury(dollars) {
+  normalizeRewardPoolSettings();
+  const d = roundMoney2(dollars);
+  if (d <= 0) return { platform: 0, reserve: 0, pool: 0 };
+  const c = RTXState.rewardPoolSettings || {};
+  const pw = Math.max(0, Number(c.platformSharePercent) || 0);
+  const rw = Math.max(0, Number(c.reservePercent) || 0);
+  const rpw = Math.max(0, Number(c.rewardPoolPercent) || 0);
+  const tw = pw + rw + rpw;
+  if (tw <= 0) return { platform: 0, reserve: 0, pool: d };
+  const platform = roundMoney2((d * pw) / tw);
+  const reserve = roundMoney2((d * rw) / tw);
+  const pool = roundMoney2(Math.max(0, d - platform - reserve));
+  return { platform, reserve, pool };
+}
+
+/**
  * Admin-only local testing: pretend `dollars` was paid into the platform.
- * Increments simulated pool balance and member qualifiedSpend (existing pool projection math unchanged).
+ * Credits platform (site) and reserve treasuries, member pool, and qualifiedSpend per revenue split.
  */
 function recordSimulatedPoolContribution(dollars, label) {
   if (!isAdminUser() || !RTXState.session || !RTXState.session.isAuthenticated) return false;
   const d = Math.max(0, Number(dollars) || 0);
   if (!d) return false;
+  const split = splitSimulatedRevenueAcrossTreasury(d);
+  normalizeAdminRevenueTreasury();
+  const t = RTXState.admin.revenueTreasury;
+  t.platformBalance = roundMoney2(t.platformBalance + split.platform);
+  t.reserveBalance = roundMoney2(t.reserveBalance + split.reserve);
   normalizeRewardPoolAdaptive();
   const curPool = Math.max(0, Math.floor(Number(RTXState.rewardPoolAdaptive.currentPoolBalance) || 0));
-  RTXState.rewardPoolAdaptive.currentPoolBalance = curPool + Math.floor(d);
-  RTXState.user.qualifiedSpend = Math.max(0, Number(RTXState.user.qualifiedSpend) || 0) + d;
+  RTXState.rewardPoolAdaptive.currentPoolBalance = curPool + Math.floor(split.pool);
+  RTXState.user.qualifiedSpend = Math.max(0, Number(RTXState.user.qualifiedSpend) || 0) + roundMoney2(d);
   normalizeRewardPoolTesting();
   const arr = RTXState.rewardPoolTesting.contributions.slice();
   arr.unshift({
     ts: Date.now(),
-    dollars: Math.round(d * 100) / 100,
-    label: String(label || "Simulated contribution").slice(0, 200)
+    dollars: roundMoney2(d),
+    label: String(label || "Simulated contribution").slice(0, 200),
+    platformDollars: split.platform,
+    reserveDollars: split.reserve,
+    poolDollars: split.pool
   });
   RTXState.rewardPoolTesting.contributions = arr.slice(0, 20);
   RTXAdminPersist.save();
   RTXUserPersist.save();
   if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.pulse === "function") {
-    RewardUX.pulse(`Reward pool +$${Math.round(d * 100) / 100} (test): ${String(label || "").slice(0, 72)}`, "success");
+    const short = `${String(label || "").slice(0, 52)} — site $${split.platform} · reserve $${split.reserve} · pool $${split.pool}`;
+    RewardUX.pulse(`Simulated revenue +$${roundMoney2(d)} (test): ${short}`, "success");
   }
   return true;
+}
+
+/**
+ * Withdraw from simulated admin treasury (site earnings or maintenance reserve). Reward pool is not withdrawable here.
+ * @param {"platform"|"reserve"} bucket
+ */
+function withdrawFromAdminRevenueTreasury(bucket, amount, note) {
+  if (!isAdminUser()) return { ok: false, message: "Admin only." };
+  normalizeAdminRevenueTreasury();
+  const amt = roundMoney2(amount);
+  if (amt <= 0) return { ok: false, message: "Enter a positive dollar amount." };
+  const t = RTXState.admin.revenueTreasury;
+  if (bucket === "platform") {
+    if (t.platformBalance + 0.0001 < amt) return { ok: false, message: "Insufficient site (admin) balance." };
+    t.platformBalance = roundMoney2(t.platformBalance - amt);
+  } else if (bucket === "reserve") {
+    if (t.reserveBalance + 0.0001 < amt) return { ok: false, message: "Insufficient reserve balance." };
+    t.reserveBalance = roundMoney2(t.reserveBalance - amt);
+  } else {
+    return { ok: false, message: "Invalid withdrawal bucket." };
+  }
+  const w = t.withdrawalLog.slice();
+  w.unshift({
+    ts: Date.now(),
+    bucket,
+    amount: amt,
+    note: String(note || "").slice(0, 200)
+  });
+  t.withdrawalLog = w.slice(0, 30);
+  RTXAdminPersist.save();
+  const cap = bucket === "platform" ? "site (admin)" : "reserve";
+  return { ok: true, message: `Recorded withdrawal of $${amt.toFixed(2)} from ${cap}.` };
 }
 
 /**
