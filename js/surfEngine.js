@@ -105,11 +105,9 @@ const SurfEngine = {
   },
 
   canPatchSurfDom() {
-    const anti = RTXState.antiCheat;
     if (RTXState.currentView !== "surf") return false;
     if (!document.querySelector(".surf-page")) return false;
     if (!document.getElementById("surf-active-frame")) return false;
-    if (anti.captchaRequired && !anti.captchaSolved) return false;
     return true;
   },
 
@@ -121,6 +119,17 @@ const SurfEngine = {
       RewardUX.refreshToast();
     }
     return true;
+  },
+
+  parseCaptchaPromptExpected(promptText) {
+    const text = String(promptText || "").trim();
+    const m = text.match(/What\s+is\s+(\d+)\s*([+-])\s*(\d+)\s*\?/i);
+    if (!m) return null;
+    const a = Number(m[1]);
+    const op = m[2];
+    const b = Number(m[3]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+    return op === "-" ? a - b : a + b;
   },
 
   _escapeSurfCaptchaText(s) {
@@ -418,8 +427,22 @@ const SurfEngine = {
     }
 
     const answer = Number(raw);
-    const expected = Number(anti.captchaAnswer);
-    const ok = Number.isFinite(answer) && Number.isFinite(expected) && answer === expected;
+    const expectedFromState = Number(anti.captchaAnswer);
+    const promptNode = document.querySelector(".surf-captcha-label");
+    const expectedFromLabel = this.parseCaptchaPromptExpected(promptNode ? promptNode.textContent : "");
+    const expectedFromStoredPrompt = this.parseCaptchaPromptExpected(anti.captchaPrompt);
+    const candidates = [expectedFromState, expectedFromLabel, expectedFromStoredPrompt].filter((v) => Number.isFinite(v));
+    const ok = Number.isFinite(answer) && candidates.includes(answer);
+
+    if (ok) {
+      const resolved = Number.isFinite(expectedFromLabel)
+        ? expectedFromLabel
+        : Number.isFinite(expectedFromStoredPrompt)
+          ? expectedFromStoredPrompt
+          : expectedFromState;
+      anti.captchaAnswer = resolved;
+      if (promptNode && promptNode.textContent) anti.captchaPrompt = String(promptNode.textContent);
+    }
 
     if (ok) {
       anti.captchaSolved = true;
