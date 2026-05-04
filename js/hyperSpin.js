@@ -1,8 +1,8 @@
 const HyperSpin = {
   premiumSpinCost: 10,
   /**
-   * Wheel segment order (must match HyperSpinWheel conic, clockwise from fixed top pointer):
-   * index 0 = top wedge, then clockwise.
+   * Wheel segment order (must match HyperSpinWheel CSS conic, clockwise from fixed top pointer):
+   * index 0 = first wedge from 0°, then clockwise.
    */
   rewards: [
     { label: "+5 Credits", type: "credits", value: 5, weight: 35 },

@@ -1633,7 +1633,7 @@ const HyperSpinPageUI = {
         return;
       }
       HyperSpinWheel.startSpin({
-        canvasId: "hyperspin-page-wheel-canvas",
+        diskId: "hyperspin-page-wheel-disk",
         winningIndex: picked.winningIndex,
         segment: picked.segment,
         onComplete: () => {
@@ -1654,7 +1654,7 @@ const HyperSpinPageUI = {
   },
 
   _recordSpinSuccess(reward) {
-    this.lastReward = reward && reward.label ? `You won: ${reward.label}` : "You won: (see wheel)";
+    this.lastReward = reward && reward.label ? `You won: ${reward.label}` : "You won";
     this.lastTone = "success";
     const currentHistory = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
     currentHistory.unshift({
@@ -1676,7 +1676,7 @@ function HyperSpinPageComponent() {
       : null;
   const wheelHtml =
     typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.renderHTML
-      ? HyperSpinWheel.renderHTML({ canvasId: "hyperspin-page-wheel-canvas", stageClass: "", highlightIndex })
+      ? HyperSpinWheel.renderHTML({ diskId: "hyperspin-page-wheel-disk", highlightIndex })
       : "";
   return `
     <section class="revcoin-store-page">
@@ -1691,9 +1691,9 @@ function HyperSpinPageComponent() {
       <section class="panel hyperspin-panel">
         <h3>Spin the wheel</h3>
         <p class="my-sites-subtitle">The prize is chosen first, then the wheel spins to match. Segment order follows the legend (top → clockwise).</p>
-        <div class="hyperspin-wheel-wrap">
+        <div class="rtx-hyper-wheel-wrap">
           ${wheelHtml}
-          ${wheelBusy ? `<div class="hyperspin-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
+          ${wheelBusy ? `<div class="rtx-hyper-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
         </div>
         <button
           type="button"
@@ -1705,7 +1705,7 @@ function HyperSpinPageComponent() {
         </button>
         ${
           HyperSpinPageUI.lastReward && HyperSpinPageUI.lastTone === "success"
-            ? `<div class="hyperspin-result-card">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
+            ? `<div class="rtx-hyper-result-card">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : HyperSpinPageUI.lastReward
             ? `<div class="hyperspin-feedback ${HyperSpinPageUI.lastTone}">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : ""

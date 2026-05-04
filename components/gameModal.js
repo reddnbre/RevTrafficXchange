@@ -9,6 +9,9 @@ const GameModal = {
     this.currentReward = null;
     this.animating = false;
     this._spinPick = null;
+    if (typeof HyperSpinWheel !== "undefined" && HyperSpinWheel.resetModalWheel) {
+      HyperSpinWheel.resetModalWheel();
+    }
     App.render();
   },
 
@@ -29,7 +32,7 @@ const GameModal = {
         return;
       }
       HyperSpinWheel.startSpin({
-        canvasId: "hyperspin-modal-wheel-canvas",
+        diskId: "hyperspin-modal-wheel-disk",
         winningIndex: picked.winningIndex,
         segment: picked.segment,
         onComplete: () => {
@@ -67,8 +70,7 @@ const GameModal = {
         : null;
     const wheelHtml = wheelReady
       ? HyperSpinWheel.renderHTML({
-          canvasId: "hyperspin-modal-wheel-canvas",
-          stageClass: "hyperspin-wheel-stage--compact",
+          diskId: "hyperspin-modal-wheel-disk",
           highlightIndex
         })
       : "";
@@ -80,19 +82,19 @@ const GameModal = {
       this.currentReward && this.currentReward.label ? String(this.currentReward.label) : "";
 
     return `
-      <div class="modal-overlay">
-        <div class="modal hyper-spin-modal">
-          <h2>Hyper Spin Unlocked!</h2>
-          <p style="color:var(--muted); margin-bottom: 8px;">
+      <div class="modal-overlay rtx-hyper-modal-overlay">
+        <div class="modal rtx-hyper-modal">
+          <h2>Hyper Spin Unlocked</h2>
+          <p class="rtx-hyper-modal-sub">
             Session complete. Spin the wheel for a bonus.
           </p>
 
           ${
             showWheel
               ? `
-            <div class="hyperspin-wheel-wrap">
+            <div class="rtx-hyper-wheel-wrap">
               ${wheelHtml}
-              ${spinning ? `<div class="hyperspin-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
+              ${spinning ? `<div class="rtx-hyper-spinning-hint" aria-live="polite">Spinning…</div>` : ""}
             </div>
           `
               : ""
@@ -100,10 +102,11 @@ const GameModal = {
 
           ${
             this.currentReward
-              ? `<div class="spin-result">You won: ${typeof escapeHtmlAttr === "function" ? escapeHtmlAttr(wonLabel) : wonLabel}</div>`
+              ? `<div class="rtx-hyper-result-card">You won: ${typeof escapeHtmlAttr === "function" ? escapeHtmlAttr(wonLabel) : wonLabel}</div>`
               : ""
           }
 
+          <div class="rtx-hyper-modal-actions">
           ${
             this.currentReward
               ? `<button type="button" class="btn btn-primary" onclick="GameModal.close()">Continue Surfing</button>`
@@ -111,6 +114,7 @@ const GameModal = {
               ? `<button type="button" class="btn btn-primary" disabled>Spinning…</button>`
               : `<button type="button" class="btn btn-primary" onclick="GameModal.spin()">Spin Now</button>`
           }
+          </div>
         </div>
       </div>
     `;

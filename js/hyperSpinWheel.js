@@ -1,28 +1,20 @@
 /**
- * Hyper Spin — custom canvas wheel (no Winwheel / no GSAP).
- * Segment i = HyperSpin.rewards[i], drawn clockwise from top (same as fixed legend).
- * Prize is chosen before spin; we only animate to that index. applyReward uses the pre-picked segment.
+ * Hyper Spin — CSS wheel (conic-gradient + transform). Single source: HyperSpin.rewards.
+ * Prize index is chosen before animation; reward is applied only in onComplete — never from transform.
  */
 const HyperSpinWheel = {
   isAnimating: false,
-  /** Cumulative rotation (radians), monotonic — used for smooth spins. */
-  _cumRot: {},
-  /** Increment to cancel in-flight RAF when a new spin starts (should not happen). */
-  _spinToken: 0,
-
-  TWO_PI: Math.PI * 2,
+  /** Cumulative rotation (deg) per disk, for smooth repeat spins on the page. */
+  _cumDeg: {},
+  _transitionEndHandler: null,
+  _failsafeTimer: null,
 
   getSegments() {
     return Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
   },
 
   wedgeColors() {
-    return ["#100e0c", "#171310", "#1f1a15", "#2a2118", "#241c14", "#1a1612"];
-  },
-
-  normalizeRad(r) {
-    const t = this.TWO_PI;
-    return ((r % t) + t) % t;
+    return ["#0f0d0b", "#151210", "#1a1612", "#221c16", "#1c1712", "#12100e"];
   },
 
   escapeAttr(s) {
@@ -32,21 +24,62 @@ const HyperSpinWheel = {
       .replace(/"/g, "&quot;");
   },
 
+  /** Map legacy canvasId / explicit diskId to rotating disk element id. */
+  resolveDiskId(config) {
+    const raw = (config && (config.diskId || config.canvasId)) || "";
+    const s = String(raw);
+    if (s.indexOf("modal") >= 0) return "hyperspin-modal-wheel-disk";
+    return "hyperspin-page-wheel-disk";
+  },
+
+  /** segmentAngle and selectedCenter in degrees; clockwise from top, index 0 first wedge. */
+  computeSelectedCenterDeg(winningIndex, n) {
+    const segmentAngle = 360 / n;
+    return winningIndex * segmentAngle + segmentAngle / 2;
+  },
+
+  /**
+   * From current cumulative rotation, rotate so winningIndex lands under top pointer.
+   * First spin from 0 matches: 360*6 + (360 - selectedCenter).
+   */
+  computeTargetRotationDeg(fromDeg, winningIndex, n) {
+    const segmentAngle = 360 / n;
+    const selectedCenter = winningIndex * segmentAngle + segmentAngle / 2;
+    const from = Number(fromDeg) || 0;
+    const remainder = ((360 - selectedCenter) - (from % 360) + 1080) % 360;
+    return from + 360 * 6 + remainder;
+  },
+
+  buildConicGradient() {
+    const segments = this.getSegments();
+    const n = Math.max(1, segments.length);
+    const colors = this.wedgeColors();
+    const sa = 360 / n;
+    const parts = [];
+    for (let i = 0; i < n; i++) {
+      const c = colors[i % colors.length];
+      const a0 = i * sa;
+      const a1 = (i + 1) * sa;
+      parts.push(`${c} ${a0}deg ${a1}deg`);
+    }
+    return `conic-gradient(from 0deg at 50% 50%, ${parts.join(", ")})`;
+  },
+
   renderLegendHTML(opts) {
     const segments = this.getSegments();
     const colors = this.wedgeColors();
     const hi = opts && opts.highlightIndex != null ? Number(opts.highlightIndex) : null;
     return `
-      <ol class="hyperspin-legend" aria-label="Wheel segments, clockwise from top">
+      <ol class="rtx-hyper-legend" aria-label="Wheel segments, clockwise from top">
         ${segments
           .map((seg, i) => {
             const swatch = colors[i % colors.length];
             const label = this.escapeAttr(seg.label || "");
-            const active = hi === i ? " hyperspin-legend-item--active" : "";
+            const active = hi === i ? " rtx-hyper-legend-item--active" : "";
             return `
-              <li class="hyperspin-legend-item${active}">
-                <span class="hyperspin-legend-swatch" style="background:${swatch}" aria-hidden="true"></span>
-                <span class="hyperspin-legend-label">${label}</span>
+              <li class="rtx-hyper-legend-item${active}">
+                <span class="rtx-hyper-legend-swatch" style="background:${swatch}" aria-hidden="true"></span>
+                <span class="rtx-hyper-legend-label">${label}</span>
               </li>
             `;
           })
@@ -55,110 +88,38 @@ const HyperSpinWheel = {
     `;
   },
 
-  isCompactCanvasId(canvasId) {
-    return String(canvasId).indexOf("modal") >= 0;
-  },
-
-  _fitCanvas(canvas, compact) {
-    const dpr = typeof window !== "undefined" && window.devicePixelRatio ? window.devicePixelRatio : 1;
-    const vw = typeof window !== "undefined" ? window.innerWidth : 800;
-    const cssPx = Math.floor(Math.min(compact ? 460 : 580, compact ? vw * 0.9 : vw * 0.95));
-    const px = Math.max(240, Math.floor(cssPx * Math.min(dpr, 2)));
-    if (canvas.width === px && canvas.height === px && canvas.dataset.rtxCssPx === String(cssPx)) {
-      return;
-    }
-    canvas.dataset.rtxCssPx = String(cssPx);
-    canvas.style.width = `${cssPx}px`;
-    canvas.style.height = `${cssPx}px`;
-    canvas.style.display = "block";
-    canvas.style.margin = "0 auto";
-    canvas.width = px;
-    canvas.height = px;
-  },
-
-  /** Pointer at canvas top = -π/2 (same convention as arc start at top). */
-  _computeTargetRotation(fromRad, winningIndex, n, fullSpins) {
-    const slice = this.TWO_PI / n;
-    const centerRad = -Math.PI / 2 + (winningIndex + 0.5) * slice;
-    const pointerRad = -Math.PI / 2;
-    const base = fromRad + fullSpins * this.TWO_PI;
-    let extra = this.normalizeRad(pointerRad - centerRad - base);
-    if (extra < 1e-5) extra += this.TWO_PI;
-    return base + extra;
-  },
-
-  drawWheel(canvasId, rotationRad) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const compact = this.isCompactCanvasId(canvasId);
-    this._fitCanvas(canvas, compact);
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const outer = Math.min(w, h) / 2 - 6;
-    const inner = Math.max(28, outer * 0.14);
-    const rewards = this.getSegments();
-    const n = Math.max(1, rewards.length);
-    const colors = this.wedgeColors();
-    const slice = this.TWO_PI / n;
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(rotationRad);
-
-    for (let i = 0; i < n; i++) {
-      const a0 = -Math.PI / 2 + i * slice;
-      const a1 = -Math.PI / 2 + (i + 1) * slice;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a0) * inner, Math.sin(a0) * inner);
-      ctx.arc(0, 0, outer, a0, a1, false);
-      ctx.arc(0, 0, inner, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fill();
-      ctx.strokeStyle = "rgba(249,115,22,0.45)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    ctx.restore();
-  },
-
-  syncIdleWheels() {
-    if (this.isAnimating) return;
-    try {
-      if (typeof RTXState !== "undefined" && RTXState.currentView === "hyper-spin") {
-        const c = document.getElementById("hyperspin-page-wheel-canvas");
-        if (c) this.drawWheel("hyperspin-page-wheel-canvas", this._cumRot["hyperspin-page-wheel-canvas"] || 0);
-      }
-      if (typeof GameModal !== "undefined" && GameModal.visible && !GameModal.currentReward && !GameModal.animating) {
-        const c = document.getElementById("hyperspin-modal-wheel-canvas");
-        if (c) this.drawWheel("hyperspin-modal-wheel-canvas", this._cumRot["hyperspin-modal-wheel-canvas"] || 0);
-      }
-    } catch (e) {}
-  },
-
+  /**
+   * @param {{ diskId?: string, canvasId?: string, stageClass?: string, highlightIndex?: number|null }} config
+   */
   renderHTML(config) {
     const cfg = config || {};
-    const canvasId =
-      cfg.canvasId ||
-      (String(cfg.diskId || "").indexOf("modal") >= 0 ? "hyperspin-modal-wheel-canvas" : "hyperspin-page-wheel-canvas");
-    const stageClass = cfg.stageClass ? String(cfg.stageClass) : "";
+    const diskId = this.resolveDiskId(cfg);
+    const compact = diskId.indexOf("modal") >= 0;
+    const stageExtra = compact ? " rtx-hyper-wheel-stage--compact" : "";
+    const legacyStage = cfg.stageClass ? String(cfg.stageClass) : "";
     const highlightIndex = cfg.highlightIndex != null ? cfg.highlightIndex : null;
     const legend = this.renderLegendHTML({ highlightIndex });
+    const rot = Number(this._cumDeg[diskId]) || 0;
+    const conic = this.buildConicGradient();
+
     return `
-      <div class="hyperspin-wheel-ui">
-        <div class="hyperspin-wheel-stage ${stageClass}">
-          <div class="hyperspin-wheel-glow" aria-hidden="true"></div>
-          <div class="hyperspin-wheel-rim" aria-hidden="true"></div>
-          <div class="hyperspin-wheel-canvas-box">
-            <div class="hyperspin-wheel-pointer" aria-hidden="true"></div>
-            <canvas id="${canvasId}" class="hyperspin-wheel-canvas" width="560" height="560" aria-label="Hyper Spin prize wheel"></canvas>
+      <div class="rtx-hyper-wheel-ui">
+        <div class="rtx-hyper-wheel-stage${stageExtra} ${legacyStage}">
+          <div class="rtx-hyper-wheel-glow" aria-hidden="true"></div>
+          <div class="rtx-hyper-ring rtx-hyper-ring--outer" aria-hidden="true"></div>
+          <div class="rtx-hyper-ring rtx-hyper-ring--inner" aria-hidden="true"></div>
+          <div class="rtx-hyper-wheel-frame">
+            <div class="rtx-hyper-pointer" aria-hidden="true"></div>
+            <div class="rtx-hyper-disk-clip">
+              <div
+                id="${diskId}"
+                class="rtx-hyper-disk"
+                style="transform: rotate(${rot}deg); background-image: ${conic};"
+                aria-label="Hyper Spin prize wheel"
+              >
+                <div class="rtx-hyper-hub" aria-hidden="true">⚡</div>
+              </div>
+            </div>
           </div>
         </div>
         ${legend}
@@ -166,18 +127,26 @@ const HyperSpinWheel = {
     `;
   },
 
-  _easeOutCubic(t) {
-    return 1 - Math.pow(1 - t, 3);
+  resetModalWheel() {
+    const id = "hyperspin-modal-wheel-disk";
+    this._cumDeg[id] = 0;
+    const el = typeof document !== "undefined" ? document.getElementById(id) : null;
+    if (el) {
+      el.style.transition = "none";
+      el.style.transform = "rotate(0deg)";
+    }
+  },
+
+  syncIdleWheels() {
+    /* CSS wheel — no canvas redraw; optional future: sync if rewards hot-reload */
   },
 
   /**
-   * @param {{ canvasId?: string, diskId?: string, winningIndex: number, segment: object, durationMs?: number, onComplete?: () => void }} opts
+   * @param {{ diskId?: string, canvasId?: string, winningIndex: number, segment: object, durationMs?: number, onComplete?: () => void }} opts
    */
   startSpin(opts) {
     const onComplete = opts && typeof opts.onComplete === "function" ? opts.onComplete : null;
-    const canvasId =
-      (opts && opts.canvasId) ||
-      (opts && String(opts.diskId || "").indexOf("modal") >= 0 ? "hyperspin-modal-wheel-canvas" : "hyperspin-page-wheel-canvas");
+    const diskId = this.resolveDiskId(opts || {});
     const winningIndex = opts && opts.winningIndex;
     const segment = opts && opts.segment;
     const segments = this.getSegments();
@@ -189,39 +158,60 @@ const HyperSpinWheel = {
       return;
     }
 
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) {
+    const el = document.getElementById(diskId);
+    if (!el) {
       if (onComplete) onComplete();
       return;
     }
 
     this.isAnimating = true;
-    this._spinToken += 1;
-    const token = this._spinToken;
-
-    const compact = this.isCompactCanvasId(canvasId);
-    this._fitCanvas(canvas, compact);
-
-    const fromR = this._cumRot[canvasId] || 0;
-    const toR = this._computeTargetRotation(fromR, winningIndex, n, 6);
+    const fromDeg = Number(this._cumDeg[diskId]) || 0;
+    const toDeg = this.computeTargetRotationDeg(fromDeg, winningIndex, n);
     const durationMs = opts && Number(opts.durationMs) > 0 ? Number(opts.durationMs) : 4800;
-    const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
 
-    const frame = (now) => {
-      if (token !== this._spinToken) return;
-      const t = Math.min(1, (now - t0) / durationMs);
-      const e = this._easeOutCubic(t);
-      const r = fromR + (toR - fromR) * e;
-      this.drawWheel(canvasId, r);
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
-        this._cumRot[canvasId] = toR;
-        this.isAnimating = false;
-        if (typeof onComplete === "function") onComplete();
+    if (this._failsafeTimer) {
+      clearTimeout(this._failsafeTimer);
+      this._failsafeTimer = null;
+    }
+    if (this._transitionEndHandler) {
+      el.removeEventListener("transitionend", this._transitionEndHandler);
+      this._transitionEndHandler = null;
+    }
+
+    const ease = "cubic-bezier(0.12, 0.72, 0.12, 1)";
+
+    el.style.transition = "none";
+    el.style.transform = `rotate(${fromDeg}deg)`;
+    void el.offsetHeight;
+
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (this._failsafeTimer) {
+        clearTimeout(this._failsafeTimer);
+        this._failsafeTimer = null;
       }
+      el.removeEventListener("transitionend", done);
+      this._transitionEndHandler = null;
+      this._cumDeg[diskId] = toDeg;
+      this.isAnimating = false;
+      if (typeof onComplete === "function") onComplete();
     };
-    requestAnimationFrame(frame);
+
+    const done = (ev) => {
+      if (ev && ev.propertyName && ev.propertyName !== "transform") return;
+      finish();
+    };
+
+    this._transitionEndHandler = done;
+    el.addEventListener("transitionend", done);
+    this._failsafeTimer = setTimeout(finish, durationMs + 200);
+
+    requestAnimationFrame(() => {
+      el.style.transition = `transform ${durationMs}ms ${ease}`;
+      el.style.transform = `rotate(${toDeg}deg)`;
+    });
   }
 };
 
