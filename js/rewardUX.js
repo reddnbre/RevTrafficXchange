@@ -1,0 +1,251 @@
+/**
+ * Reward experience layer — toasts, progress readouts, nudges.
+ * Read-only helpers; does not alter payout or reward math.
+ */
+const RewardUX = {
+  _toastTimer: null,
+  TOAST_MS: 4200,
+
+  esc(s) {
+    return typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
+      ? App.escapeHtml(s)
+      : String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/"/g, "&quot;");
+  },
+
+  pulse(message, tone) {
+    if (!RTXState.ui) return;
+    const msg = String(message || "").trim();
+    if (!msg) return;
+    if (this._toastTimer) {
+      clearTimeout(this._toastTimer);
+      this._toastTimer = null;
+    }
+    RTXState.ui.rewardToast = { message: msg, tone: tone || "success" };
+    if (typeof App !== "undefined" && App && typeof App.render === "function") {
+      App.render();
+    }
+    this._toastTimer = setTimeout(() => {
+      this._toastTimer = null;
+      if (RTXState.ui) RTXState.ui.rewardToast = null;
+      if (typeof App !== "undefined" && App && typeof App.render === "function") {
+        App.render();
+      }
+    }, this.TOAST_MS);
+  },
+
+  notifyCreditsFromRecord(n) {
+    const amount = Math.max(0, Math.floor(Number(n) || 0));
+    if (!amount) return;
+    this.pulse(`+${amount} traffic credits locked in`, "success");
+  },
+
+  onHyperSpinApplied(reward) {
+    if (!reward || typeof reward !== "object") return;
+    if (reward.type === "credits") return;
+    if (reward.type === "multiplier") {
+      this.pulse(`Hyper Spin: ${reward.value}x payout multiplier is live`, "success");
+    } else if (reward.type === "none") {
+      this.pulse("Hyper Spin: no bonus chip — your streak still grows", "neutral");
+    }
+  },
+
+  sessionCompletePulse() {
+    this.pulse("Session complete — Hyper Spin unlocked", "success");
+  },
+
+  /** Confirmed = tallied in dailyActivity.creditsEarned; pending = credits still claimable this session (estimate). */
+  getTodayCreditsBreakdown() {
+    checkDailyReset();
+    const daily = RTXState.user.dailyActivity || {};
+    const confirmed = Math.max(0, Math.floor(Number(daily.creditsEarned) || 0));
+    const per =
+      typeof CreditSystem !== "undefined" && CreditSystem && typeof CreditSystem.getCreditsForValidView === "function"
+        ? CreditSystem.getCreditsForValidView()
+        : Math.round((Number(RTXState.settings.baseCreditsPerView) || 1) * (Number(RTXState.user.multiplier) || 1));
+    const vps = Math.max(1, Math.floor(Number(RTXState.settings.viewsPerSession) || 25));
+    const sv = Math.max(0, Math.floor(Number(RTXState.user.sessionViews) || 0));
+    const sessionOpen = !RTXState.sessionCompleted && RTXState.sessionActive;
+    const remaining = sessionOpen ? Math.max(0, vps - sv) : 0;
+    const pending = remaining * per;
+    return { confirmed, pending, per, remaining, total: confirmed + pending };
+  },
+
+  getDailyTierProgressMeta() {
+    checkDailyReset();
+    const s = Math.max(0, Number(RTXState.user.dailyActivity && RTXState.user.dailyActivity.activityScore) || 0);
+    const names = ["Not Qualified", "Building", "Qualified", "Strong", "Elite Daily"];
+    const floors = [0, 50, 100, 250, 500];
+    let idx = 0;
+    if (s >= 500) idx = 4;
+    else if (s >= 250) idx = 3;
+    else if (s >= 100) idx = 2;
+    else if (s >= 50) idx = 1;
+    else idx = 0;
+    const tierName = names[idx];
+    const nextFloor = idx < 4 ? floors[idx + 1] : null;
+    const currFloor = floors[idx];
+    const span = nextFloor != null ? Math.max(1, nextFloor - currFloor) : 1;
+    const pct = nextFloor == null ? 100 : Math.min(100, Math.max(0, ((s - currFloor) / span) * 100));
+    return {
+      score: s,
+      tierName,
+      pct,
+      nextFloor,
+      nextName: nextFloor != null ? names[idx + 1] : null
+    };
+  },
+
+  getLoyaltyProgressMeta() {
+    const info = getLoyaltyTierInfo(RTXState.user.loyaltyScore);
+    const cur = info.progressCurrent;
+    const tgt = info.progressTarget;
+    const pct = tgt && tgt > 0 ? Math.min(100, (cur / tgt) * 100) : 100;
+    return { info, pct };
+  },
+
+  getSessionUrgency() {
+    const vps = Math.max(1, Math.floor(Number(RTXState.settings.viewsPerSession) || 25));
+    const sv = Math.max(0, Math.floor(Number(RTXState.user.sessionViews) || 0));
+    const left = Math.max(0, vps - sv);
+    const pct = Math.min(100, (sv / vps) * 100);
+    let level = "calm";
+    if (pct >= 92) level = "final";
+    else if (pct >= 72) level = "hot";
+    else if (pct >= 40) level = "warm";
+    return { left, pct, level, sv, vps };
+  },
+
+  getNudgeLines() {
+    const lines = [];
+    const daily = this.getDailyTierProgressMeta();
+    const sess = this.getSessionUrgency();
+    const spins = Math.max(0, Math.floor(Number(RTXState.user.hyperSpins) || 0));
+
+    if (sess.left === 1) lines.push("1 view left — Hyper Spin is one claim away.");
+    else if (sess.left > 0 && sess.left <= 4) lines.push(`${sess.left} views until this session unlocks Hyper Spin.`);
+
+    if (daily.nextFloor != null) {
+      const gap = daily.nextFloor - daily.score;
+      if (gap > 0 && gap <= 12) lines.push(`${gap} daily activity points until “${daily.nextName}”.`);
+    }
+
+    if (spins > 0) lines.push(`You have ${spins} Hyper Spin${spins === 1 ? "" : "s"} ready on the Hyper Spin page.`);
+
+    const loyal = this.getLoyaltyProgressMeta();
+    if (loyal.info.progressTarget && loyal.pct >= 78 && loyal.pct < 100) {
+      lines.push(`${loyal.info.nextTier} tier is almost in range.`);
+    }
+
+    return lines.slice(0, 3);
+  },
+
+  formatMoney(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "$0";
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(x);
+  },
+
+  renderToast() {
+    const t = RTXState.ui && RTXState.ui.rewardToast;
+    if (!t || !t.message) return "";
+    const tone = t.tone === "error" ? "error" : t.tone === "neutral" ? "neutral" : "success";
+    return `
+      <div class="reward-ux-toast reward-ux-toast--${tone}" role="status" aria-live="polite">
+        <span class="reward-ux-toast__bolt" aria-hidden="true">⚡</span>
+        <span class="reward-ux-toast__msg">${this.esc(t.message)}</span>
+      </div>
+    `;
+  },
+
+  renderDashboardRibbon() {
+    if (!RTXState.session || !RTXState.session.isAuthenticated) return "";
+    const credits = this.getTodayCreditsBreakdown();
+    const daily = this.getDailyTierProgressMeta();
+    const loyal = this.getLoyaltyProgressMeta();
+    const nudges = this.getNudgeLines();
+    const pool = typeof getRewardPoolPreview === "function" ? getRewardPoolPreview() : {};
+    const poolBal = Number(pool.adaptiveCurrentPoolBalance);
+    const health = Math.max(0, Math.min(1, Number(pool.poolHealthRatio) || 0));
+    const mode = pool.adaptiveMode ? String(pool.adaptiveMode) : "steady";
+    const proj = typeof getProjectedDailyPoolReward === "function" ? getProjectedDailyPoolReward() : {};
+
+    const nudgeHtml =
+      nudges.length > 0
+        ? `<ul class="reward-ux-nudges">${nudges.map((l) => `<li>${this.esc(l)}</li>`).join("")}</ul>`
+        : "";
+
+    return `
+      <section class="reward-ux-ribbon" aria-label="Today’s reward progress">
+        <div class="reward-ux-ribbon__grid">
+          <div class="reward-ux-card reward-ux-card--earnings">
+            <div class="reward-ux-card__label">Today’s traffic credits</div>
+            <div class="reward-ux-card__hero">
+              <span class="reward-ux-card__big">${credits.confirmed}</span>
+              <span class="reward-ux-card__suffix">confirmed</span>
+            </div>
+            <div class="reward-ux-card__sub">+${credits.pending} pending this session (if you finish)</div>
+            <div class="reward-ux-card__hint">${credits.remaining} views still on the board · +${credits.per} per claim</div>
+          </div>
+          <div class="reward-ux-card reward-ux-card--daily">
+            <div class="reward-ux-card__label">Daily reward tier track</div>
+            <div class="reward-ux-tier-pill">${this.esc(daily.tierName)}</div>
+            <div class="reward-ux-bar"><div class="reward-ux-bar__fill" style="width:${daily.pct}%"></div></div>
+            <div class="reward-ux-card__sub">
+              ${daily.nextName ? `Next: ${this.esc(daily.nextName)} at ${daily.nextFloor} pts` : "Top daily band unlocked for today"}
+            </div>
+            <div class="reward-ux-card__hint">Activity score today: ${daily.score}</div>
+          </div>
+          <div class="reward-ux-card reward-ux-card--loyalty">
+            <div class="reward-ux-card__label">Loyalty tier</div>
+            <div class="reward-ux-tier-pill reward-ux-tier-pill--orange">${this.esc(loyal.info.tier)}</div>
+            <div class="reward-ux-bar reward-ux-bar--blue"><div class="reward-ux-bar__fill" style="width:${loyal.pct}%"></div></div>
+            <div class="reward-ux-card__sub">${this.esc(loyal.info.progressLabel)}</div>
+            <div class="reward-ux-card__hint">Loyalty multiplier ×${loyal.info.multiplier.toFixed(1)}</div>
+          </div>
+          <div class="reward-ux-card reward-ux-card--pool">
+            <div class="reward-ux-card__label">Reward pool (live readout)</div>
+            <div class="reward-ux-card__hero reward-ux-card__hero--sm">${this.formatMoney(Number.isFinite(poolBal) ? poolBal : 0)}</div>
+            <div class="reward-ux-card__sub">Simulated balance · ${this.esc(mode)} release curve</div>
+            <div class="reward-ux-bar reward-ux-bar--health"><div class="reward-ux-bar__fill" style="width:${Math.round(health * 100)}%"></div></div>
+            <div class="reward-ux-card__hint">Pool eligibility: ${this.esc(proj.eligibilityLabel || "—")}</div>
+          </div>
+        </div>
+        ${nudgeHtml}
+      </section>
+    `;
+  },
+
+  renderSurfStrip() {
+    if (!RTXState.session || !RTXState.session.isAuthenticated) return "";
+    const credits = this.getTodayCreditsBreakdown();
+    const sess = this.getSessionUrgency();
+    const daily = this.getDailyTierProgressMeta();
+    const nudges = this.getNudgeLines();
+    const first = nudges[0] || "Keep claiming — every view stacks credits and daily score.";
+    return `
+      <div class="reward-ux-surf-strip" role="region" aria-label="Session and earnings">
+        <div class="reward-ux-surf-strip__earnings">
+          <span class="reward-ux-surf-strip__label">Today</span>
+          <strong>${credits.confirmed}</strong><span class="reward-ux-surf-strip__muted"> confirmed</span>
+          <span class="reward-ux-surf-strip__dot">·</span>
+          <strong>+${credits.pending}</strong><span class="reward-ux-surf-strip__muted"> pending</span>
+        </div>
+        <div class="reward-ux-surf-strip__session reward-ux-surf-strip__session--${sess.level}">
+          <span class="reward-ux-surf-strip__label">Session</span>
+          <strong>${sess.sv}</strong><span class="reward-ux-surf-strip__muted">/${sess.vps}</span>
+          <div class="reward-ux-surf-strip__bar"><div style="width:${sess.pct}%"></div></div>
+        </div>
+        <div class="reward-ux-surf-strip__tier" title="Daily activity tier">
+          <span class="reward-ux-surf-strip__label">Daily tier</span>
+          <strong>${this.esc(daily.tierName)}</strong>
+        </div>
+        <div class="reward-ux-surf-strip__nudge">${this.esc(first)}</div>
+      </div>
+    `;
+  }
+};
+
+window.RewardUX = RewardUX;

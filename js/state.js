@@ -85,7 +85,9 @@ const RTXState = {
     /** Simple math captcha for local demo login (sum of loginCaptchaA + loginCaptchaB). */
     loginCaptchaA: 0,
     loginCaptchaB: 0,
-    loginCaptchaSum: 0
+    loginCaptchaSum: 0,
+    /** Ephemeral toast from RewardUX (display only). */
+    rewardToast: null
   },
 
   settings: {
@@ -1198,6 +1200,9 @@ function recordMemberCreditEarnings(amount) {
   normalizeDailyActivity();
   RTXState.user.dailyActivity.creditsEarned = Math.max(0, Math.floor(Number(RTXState.user.dailyActivity.creditsEarned) || 0)) + n;
   RTXState.user.lifetimeStats.creditsEarned += n;
+  if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.notifyCreditsFromRecord === "function") {
+    RewardUX.notifyCreditsFromRecord(n);
+  }
 }
 
 function recordMemberValidViewLifetime() {

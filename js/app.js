@@ -471,6 +471,7 @@ const App = {
         ${typeof RewardsAcknowledgmentComponent === "function" ? RewardsAcknowledgmentComponent() : ""}
         ${GameModal.render()}
         ${LoadingScreen.render()}
+        ${typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.renderToast === "function" ? RewardUX.renderToast() : ""}
       </div>
     `;
     if (typeof queueMicrotask === "function") {

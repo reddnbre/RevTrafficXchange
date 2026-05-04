@@ -36,6 +36,9 @@ const SessionSystem = {
     RTXState.user.loyaltyScore += 25;
     RTXUserPersist.save();
 
+    if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.sessionCompletePulse === "function") {
+      RewardUX.sessionCompletePulse();
+    }
     GameModal.showHyperSpin();
   },
 

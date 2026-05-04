@@ -98,9 +98,10 @@ const GameModal = {
     const wonLabel =
       this.currentReward && this.currentReward.label ? String(this.currentReward.label) : "";
 
+    const celebrate = !!this.currentReward;
     return `
       <div class="modal-overlay rtx-hyper-modal-overlay">
-        <div class="modal rtx-hyper-modal">
+        <div class="modal rtx-hyper-modal${celebrate ? " rtx-hyper-modal--celebrate" : ""}">
           <h2>Hyper Spin Unlocked</h2>
           <p class="rtx-hyper-modal-sub">
             Session complete — one bonus draw, same odds as the Hyper Spin page.
@@ -111,7 +112,8 @@ const GameModal = {
 
           ${
             this.currentReward
-              ? `<div class="rtx-hyper-result-card rtx-hyper-result-card--pop">You won: ${esc(wonLabel)}</div>`
+              ? `<div class="rtx-hyper-win-burst" aria-hidden="true"></div>
+              <div class="rtx-hyper-result-card rtx-hyper-result-card--pop rtx-hyper-result-card--celebrate">You won: ${esc(wonLabel)}</div>`
               : ""
           }
 

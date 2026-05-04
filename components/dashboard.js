@@ -299,8 +299,13 @@ function handleDashboardBannerAdClick(adId) {
 }
 
 function DashboardComponent() {
+  checkDailyReset();
   const progress = SessionSystem.getSessionProgressPercent();
   const loyalty = getLoyaltyTierInfo(RTXState.user.loyaltyScore);
+  const sessionUrgency =
+    typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.getSessionUrgency === "function"
+      ? RewardUX.getSessionUrgency()
+      : { level: "calm", left: 0, pct: progress };
   const memberHandle = String(RTXState.user.username || "").trim().toLowerCase();
   const welcome =
     memberHandle && typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
@@ -343,6 +348,7 @@ function DashboardComponent() {
 
   return `
     ${referralPanel}
+    ${typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.renderDashboardRibbon === "function" ? RewardUX.renderDashboardRibbon() : ""}
     <section class="hero">
       <div class="hero-grid">
         <div>
@@ -358,10 +364,15 @@ function DashboardComponent() {
           </button>
         </div>
 
-        <div class="panel">
+        <div class="panel dashboard-session-panel dashboard-session-panel--${sessionUrgency.level}">
           <h3>Today’s Session</h3>
           <p>${RTXState.user.sessionViews} / ${RTXState.settings.viewsPerSession} valid views</p>
-          <div class="progress-bar">
+          ${
+            sessionUrgency.left > 0 && sessionUrgency.left <= 6
+              ? `<p class="dashboard-session-nudge">⚡ ${sessionUrgency.left} view${sessionUrgency.left === 1 ? "" : "s"} until Hyper Spin unlocks</p>`
+              : ""
+          }
+          <div class="progress-bar dashboard-session-progress dashboard-session-progress--${sessionUrgency.level}">
             <div class="progress-fill" style="width:${progress}%"></div>
           </div>
           <p style="color:var(--muted);margin-top:12px;">
@@ -412,9 +423,10 @@ function DashboardComponent() {
 }
 
 function StatsComponent() {
+  checkDailyReset();
   const loyalty = getLoyaltyTierInfo(RTXState.user.loyaltyScore);
   const rewardPool = getRewardPoolPreview();
-  checkDailyReset();
+  const poolProjLine = typeof getProjectedDailyPoolReward === "function" ? getProjectedDailyPoolReward() : {};
   checkBoostExpiry();
   manageActivityBoostCountdown();
   const daily = RTXState.user.dailyActivity;
@@ -461,10 +473,20 @@ function StatsComponent() {
       <div class="wallet-rewards-grid">
         <div class="stat-card reward-pool-mini">
           <div class="stat-label">Loyalty Reward Pool</div>
-          <div class="stat-value reward-pool-mini-value">$${rewardPool.totalPoolBalance.toFixed(2)} Available</div>
-          <div class="stat-sub">Reward Eligibility: Building</div>
-          <div class="stat-sub reward-pool-mini-status">⚡ Status: Warming Up</div>
-          <div class="stat-sub">Stay active to unlock better reward opportunities.</div>
+          <div class="stat-value reward-pool-mini-value">${(() => {
+            const bal = Number(rewardPool.adaptiveCurrentPoolBalance);
+            const safe = Number.isFinite(bal) ? bal : 0;
+            return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(safe);
+          })()} <span class="reward-pool-mini-unit">simulated balance</span></div>
+          <div class="stat-sub">Health: ${Math.round((Number(rewardPool.poolHealthRatio) || 0) * 100)}% · mode: ${App.escapeHtml(String(rewardPool.adaptiveMode || "—"))}</div>
+          <div class="stat-sub">Cycle release ${Number(rewardPool.cycleRewardPercent) || 0}% · daily slice ${Number(rewardPool.dailyReleasePercent) || 0}%</div>
+          <div class="stat-sub">Pool eligibility: ${App.escapeHtml(String(poolProjLine.eligibilityLabel || "—"))}</div>
+          <div class="stat-sub">Est. pool share today: ${App.escapeHtml(
+            typeof poolProjLine.projectedDollars === "number" && Number.isFinite(poolProjLine.projectedDollars)
+              ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(poolProjLine.projectedDollars)
+              : "$0.00"
+          )}</div>
+          <div class="stat-sub">Stay active to improve your share of simulated daily release.</div>
           <div class="stat-sub reward-pool-mini-note">No earnings guaranteed.</div>
         </div>
 

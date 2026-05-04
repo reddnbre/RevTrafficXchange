@@ -41,6 +41,7 @@ function SurfPageComponent() {
 
   return `
     <div class="surf-page">
+      ${typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.renderSurfStrip === "function" ? RewardUX.renderSurfStrip() : ""}
       <div class="surf-cmd-bar">
         <div class="surf-cmd-scroll">
           <div class="surf-cmd-brand" aria-label="RevTrafficXchange">

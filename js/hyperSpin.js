@@ -56,6 +56,11 @@ const HyperSpin = {
     if (!skipRender && typeof App !== "undefined" && App && typeof App.render === "function") {
       App.render();
     }
+    if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.onHyperSpinApplied === "function") {
+      if (reward.type !== "credits") {
+        RewardUX.onHyperSpinApplied(reward);
+      }
+    }
     return reward;
   },
 
@@ -128,6 +133,9 @@ function buyHyperSpin() {
   RTXState.user.hyperSpins = currentSpins + 1;
   RTXUserPersist.save();
   setPremiumSpinFeedback("Hyper Spin added!", "success");
+  if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.pulse === "function") {
+    RewardUX.pulse("Hyper Spin added — head to Hyper Spin to draw", "success");
+  }
 
   setTimeout(() => {
     if (RTXState.ui.premiumSpinFeedback === "Hyper Spin added!") {

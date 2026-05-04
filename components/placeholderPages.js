@@ -1700,8 +1700,9 @@ function HyperSpinPageComponent() {
         </div>
       `
       : "";
+  const showCelebrate = HyperSpinPageUI.lastReward && HyperSpinPageUI.lastTone === "success";
   return `
-    <section class="revcoin-store-page">
+    <section class="revcoin-store-page rtx-hyper-page-root${showCelebrate ? " rtx-hyper-page-root--celebrate" : ""}">
       <header class="my-sites-header">
         <h1 class="my-sites-title">Hyper Spin</h1>
         <p class="my-sites-subtitle">Use your earned or purchased spins here.</p>
@@ -1710,7 +1711,7 @@ function HyperSpinPageComponent() {
         </div>
       </header>
 
-      <section class="panel hyperspin-panel">
+      <section class="panel hyperspin-panel rtx-hyper-panel-glow">
         <h3>Draw a reward</h3>
         <p class="my-sites-subtitle">Weighted odds. The ticker is flair — your prize is chosen when you tap Draw.</p>
         ${slotFrame}
@@ -1726,7 +1727,7 @@ function HyperSpinPageComponent() {
         </button>
         ${
           HyperSpinPageUI.lastReward && HyperSpinPageUI.lastTone === "success"
-            ? `<div class="rtx-hyper-result-card rtx-hyper-result-card--pop">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
+            ? `<div class="rtx-hyper-win-burst" aria-hidden="true"></div><div class="rtx-hyper-result-card rtx-hyper-result-card--pop rtx-hyper-result-card--celebrate">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : HyperSpinPageUI.lastReward
             ? `<div class="hyperspin-feedback ${HyperSpinPageUI.lastTone}">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : ""
