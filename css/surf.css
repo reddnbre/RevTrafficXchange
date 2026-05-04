@@ -128,12 +128,15 @@
   padding: 3px 6px;
   gap: 1px;
   max-width: min(188px, 34vw);
+  border-color: rgba(251, 191, 36, 0.2);
+  background: rgba(251, 191, 36, 0.045);
 }
 
 .app-shell.hyper-mode .surf-pool-projection-title {
   font-size: 7px;
   letter-spacing: 0.04em;
   margin-bottom: 0;
+  color: rgba(253, 230, 138, 0.82);
 }
 
 .app-shell.hyper-mode .surf-pool-projection-row {
@@ -142,12 +145,21 @@
   gap: 6px;
 }
 
+.app-shell.hyper-mode .surf-pool-projection-k {
+  color: rgba(253, 230, 138, 0.58);
+}
+
+.app-shell.hyper-mode .surf-pool-projection-v {
+  color: rgba(255, 251, 235, 0.88);
+}
+
 .app-shell.hyper-mode .surf-pool-projection-reward-row {
   margin-top: 0;
 }
 
 .app-shell.hyper-mode .surf-pool-projection-reward-row .surf-pool-projection-v {
   font-size: 10px;
+  color: rgba(255, 251, 235, 0.92);
 }
 
 .app-shell.hyper-mode .surf-pool-projection-pending,

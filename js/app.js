@@ -469,11 +469,13 @@ const App = {
           <button type="button" class="app-legal-link" onclick="App.navigate('terms')">Terms & Rewards Disclaimer</button>
         </footer>
         ${typeof RewardsAcknowledgmentComponent === "function" ? RewardsAcknowledgmentComponent() : ""}
-        ${GameModal.render()}
         ${LoadingScreen.render()}
         ${typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.renderToast === "function" ? RewardUX.renderToast() : ""}
       </div>
     `;
+    if (typeof GameModal !== "undefined" && GameModal && typeof GameModal.refresh === "function") {
+      GameModal.refresh();
+    }
     if (typeof queueMicrotask === "function") {
       queueMicrotask(() => {
         if (typeof manageTrafficBoostCountdown === "function") manageTrafficBoostCountdown();

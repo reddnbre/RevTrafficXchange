@@ -1,5 +1,11 @@
 /* Hyper Spin — draw reveal + pool (no wheel) */
 
+/* Session-complete modal mounts here (outside `#app`) so the surf iframe is not torn down on each draw tick. */
+#rtx-game-modal-host {
+  position: relative;
+  z-index: 11000;
+}
+
 .rtx-hyper-slot {
   position: relative;
   border-radius: 18px;

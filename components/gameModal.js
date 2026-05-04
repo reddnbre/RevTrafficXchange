@@ -6,6 +6,22 @@ const GameModal = {
   _slotIndex: null,
   _revealProgress: 0,
 
+  /** Modal mounts outside `#app` so `App.render()` does not destroy the surf iframe during draw ticks. */
+  ensureHost() {
+    let el = document.getElementById("rtx-game-modal-host");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "rtx-game-modal-host";
+      document.body.appendChild(el);
+    }
+    return el;
+  },
+
+  refresh() {
+    const host = this.ensureHost();
+    host.innerHTML = this.visible ? this.render() : "";
+  },
+
   showHyperSpin() {
     this._sessionId += 1;
     this.visible = true;
@@ -13,7 +29,7 @@ const GameModal = {
     this.animating = false;
     this._slotIndex = null;
     this._revealProgress = 0;
-    App.render();
+    this.refresh();
   },
 
   spin() {
@@ -27,7 +43,7 @@ const GameModal = {
     this._slotIndex = Math.floor(Math.random() * n);
     this._sessionId += 1;
     const sid = this._sessionId;
-    App.render();
+    this.refresh();
 
     HyperSpin.runDrawReveal({
       winningIndex: picked.winningIndex,
@@ -36,7 +52,7 @@ const GameModal = {
         if (sid !== this._sessionId) return;
         this._slotIndex = idx;
         this._revealProgress = progress;
-        App.render();
+        this.refresh();
       },
       onComplete: () => {
         if (sid !== this._sessionId) return;
@@ -46,7 +62,7 @@ const GameModal = {
         this._slotIndex = null;
         this._revealProgress = 0;
         RTXUserPersist.save();
-        App.render();
+        this.refresh();
       }
     });
   },
@@ -58,7 +74,11 @@ const GameModal = {
     this.animating = false;
     this._slotIndex = null;
     this._revealProgress = 0;
-    App.render();
+    if (typeof App !== "undefined" && App && typeof App.render === "function") {
+      App.render();
+    } else {
+      this.refresh();
+    }
   },
 
   render() {
