@@ -330,7 +330,7 @@ const AdminBackOffice = {
     if (typeof applyAdminTestWalletTopUp !== "function") return;
     const ok = applyAdminTestWalletTopUp(this.testWalletDraft.creditsAdd, this.testWalletDraft.coinsAdd);
     this.systemHealthMessage = ok
-      ? "Test wallet top-up applied (local only)."
+      ? "Test wallet top-up applied. Premium RevCoin adds also simulate $ into the reward pool + qualified spend (local testing)."
       : "Could not apply top-up (check amounts / admin access).";
     this.systemHealthMessageTone = ok ? "success" : "error";
     App.render();
@@ -339,7 +339,9 @@ const AdminBackOffice = {
   runAdminTestMembershipUpgrade() {
     if (typeof applyAdminTestMembership !== "function") return;
     const ok = applyAdminTestMembership("upgraded");
-    this.systemHealthMessage = ok ? "Membership set to Upgraded (test)." : "Action blocked.";
+    this.systemHealthMessage = ok
+      ? "Membership set to Upgraded (test). $10 simulated into reward pool + qualified spend."
+      : "Action blocked.";
     this.systemHealthMessageTone = ok ? "success" : "error";
     App.render();
   },

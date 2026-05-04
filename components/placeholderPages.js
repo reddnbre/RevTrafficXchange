@@ -1262,6 +1262,13 @@ const RevCoinStoreUI = {
   testFeedback: "",
   planFeedback: "",
 
+  PACKS_BY_ID: {
+    p5: { price: 5, coins: 50 },
+    p10: { price: 10, coins: 120 },
+    p20: { price: 20, coins: 260 },
+    p50: { price: 50, coins: 700 }
+  },
+
   openPurchasePlaceholder() {
     console.log("Purchase flow coming soon");
     this.modalVisible = true;
@@ -1277,27 +1284,57 @@ const RevCoinStoreUI = {
     if (!isAdminUser()) return;
     const addAmount = Math.max(0, Number(amount) || 0);
     if (!addAmount) return;
-    const current = Math.max(0, Number(RTXState.user.premiumRevCoins) || 0);
-    RTXState.user.premiumRevCoins = current + addAmount;
-    RTXUserPersist.save();
-    this.testFeedback = `Added ${addAmount} Premium RevCoins for testing.`;
+    const ok = typeof applyAdminTestWalletTopUp === "function" ? applyAdminTestWalletTopUp(0, addAmount) : false;
+    const usd =
+      typeof getSimulatedDollarsForTestCoinGrant === "function" ? getSimulatedDollarsForTestCoinGrant(addAmount) : 0;
+    this.testFeedback = ok
+      ? `Added ${addAmount} Premium RevCoins — $${usd} simulated into reward pool (qualified spend updated).`
+      : "Action blocked.";
     App.render();
   },
 
   activateUpgradeTest() {
     if (!isAdminUser()) return;
-    RTXState.user.membershipLevel = "upgraded";
-    RTXUserPersist.save();
-    this.planFeedback = "Membership set to Upgraded for testing.";
+    const ok = typeof applyAdminTestMembership === "function" ? applyAdminTestMembership("upgraded") : false;
+    this.planFeedback = ok
+      ? "Upgraded for testing — $10 simulated into reward pool + qualified spend."
+      : "Action blocked.";
     App.render();
   },
 
   revertUpgradeTest() {
     if (!isAdminUser()) return;
-    RTXState.user.membershipLevel = "free";
-    RTXUserPersist.save();
-    this.planFeedback = "Membership reverted to Free for testing.";
+    const ok = typeof applyAdminTestMembership === "function" ? applyAdminTestMembership("free") : false;
+    this.planFeedback = ok ? "Membership reverted to Free (pool totals unchanged)." : "Action blocked.";
     App.render();
+  },
+
+  simulatePackPurchase(pack) {
+    if (!isAdminUser() || !pack) return;
+    const price = Math.max(0, Number(pack.price) || 0);
+    const coins = Math.max(0, Math.floor(Number(pack.coins) || 0));
+    if (!price || !coins) return;
+    const current = Math.max(0, Number(RTXState.user.premiumRevCoins) || 0);
+    RTXState.user.premiumRevCoins = current + coins;
+    RTXUserPersist.save();
+    if (typeof recordSimulatedPoolContribution === "function") {
+      recordSimulatedPoolContribution(price, `Simulated pack: $${price} → +${coins} Premium RevCoins`);
+    }
+    this.testFeedback = `Simulated purchase: +${coins} Premium RevCoins and $${price} added to reward pool (testing).`;
+    App.render();
+  },
+
+  onPackBuyClick(packId) {
+    const pack = this.PACKS_BY_ID[packId];
+    if (!pack) {
+      this.openPurchasePlaceholder();
+      return;
+    }
+    if (isAdminUser()) {
+      this.simulatePackPurchase(pack);
+      return;
+    }
+    this.openPurchasePlaceholder();
   },
 
   renderModal() {
@@ -1347,12 +1384,17 @@ function RevCoinStorePageComponent() {
             ${pack.bestValue ? `<div class="revcoin-pack-badge">Best Value</div>` : ""}
             <div class="revcoin-pack-price">$${pack.price}</div>
             <div class="revcoin-pack-amount">${pack.coins} Premium RevCoins</div>
-            <button type="button" class="btn btn-primary revcoin-pack-btn" onclick="RevCoinStoreUI.openPurchasePlaceholder()">Buy Now</button>
+            <button type="button" class="btn btn-primary revcoin-pack-btn" onclick="RevCoinStoreUI.onPackBuyClick('${pack.id}')">Buy Now</button>
           </article>
         `
           )
           .join("")}
       </div>
+      ${
+        isAdmin
+          ? `<p class="my-sites-subtitle revcoin-admin-sim-note">Admin: Buy Now simulates checkout — you get the coins and the same dollar amount is added to the simulated reward pool and your qualified spend for pool testing.</p>`
+          : ""
+      }
 
       <section class="panel revcoin-benefits-panel">
         <h3>Why Premium RevCoins?</h3>

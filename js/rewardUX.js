@@ -177,6 +177,27 @@ const RewardUX = {
         ? `<ul class="reward-ux-nudges">${nudges.map((l) => `<li>${this.esc(l)}</li>`).join("")}</ul>`
         : "";
 
+    const contribs =
+      RTXState.rewardPoolTesting && Array.isArray(RTXState.rewardPoolTesting.contributions)
+        ? RTXState.rewardPoolTesting.contributions.slice(0, 5)
+        : [];
+    const contribHtml =
+      contribs.length > 0
+        ? `<div class="reward-ux-pool-test-log" aria-label="Simulated pool contributions">
+            <div class="reward-ux-pool-test-log__title">Recent simulated pool funding (admin testing)</div>
+            <ul>${contribs
+              .map(
+                (row) =>
+                  `<li><span class="reward-ux-pool-test-log__amt">+$${Math.round(Number(row.dollars) * 100) / 100}</span> · ${this.esc(
+                    row.label || ""
+                  )} · <span class="reward-ux-pool-test-log__time">${this.esc(
+                    row.ts ? new Date(row.ts).toLocaleString() : ""
+                  )}</span></li>`
+              )
+              .join("")}</ul>
+          </div>`
+        : "";
+
     return `
       <section class="reward-ux-ribbon" aria-label="Today’s reward progress">
         <div class="reward-ux-ribbon__grid">
@@ -213,6 +234,7 @@ const RewardUX = {
             <div class="reward-ux-card__hint">Pool eligibility: ${this.esc(proj.eligibilityLabel || "—")}</div>
           </div>
         </div>
+        ${contribHtml}
         ${nudgeHtml}
       </section>
     `;

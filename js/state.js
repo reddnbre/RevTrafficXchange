@@ -110,6 +110,14 @@ const RTXState = {
     currentPoolBalance: 85000
   },
 
+  /**
+   * Local testing: log when admin simulates purchases / upgrades into the pool.
+   * Persisted with admin state; clear in admin when resetting pool if needed later.
+   */
+  rewardPoolTesting: {
+    contributions: []
+  },
+
   miniGameSettings: {
     triggerBaseChance: 8,
     triggerSessionChance: 25,
@@ -489,6 +497,21 @@ const RTXAdminPersist = {
         RTXState.rewardPoolAdaptive = { ...RTXState.rewardPoolAdaptive, ...data.rewardPoolAdaptive };
       }
 
+      if (data.rewardPoolTesting && typeof data.rewardPoolTesting === "object") {
+        const rawC = data.rewardPoolTesting.contributions;
+        const contributions = Array.isArray(rawC)
+          ? rawC
+              .map((row) => ({
+                ts: Math.max(0, Number(row.ts) || 0),
+                dollars: Math.max(0, Number(row.dollars) || 0),
+                label: String(row.label || "").slice(0, 200)
+              }))
+              .filter((row) => row.dollars > 0 && row.ts > 0)
+              .slice(0, 20)
+          : [];
+        RTXState.rewardPoolTesting = { contributions };
+      }
+
       if (data.miniGameSettings && typeof data.miniGameSettings === "object") {
         RTXState.miniGameSettings = { ...RTXState.miniGameSettings, ...data.miniGameSettings };
       }
@@ -511,6 +534,7 @@ const RTXAdminPersist = {
           spotlightAds: RTXState.admin.spotlightAds,
           rewardPoolSettings: RTXState.rewardPoolSettings,
           rewardPoolAdaptive: RTXState.rewardPoolAdaptive,
+          rewardPoolTesting: RTXState.rewardPoolTesting,
           miniGameSettings: RTXState.miniGameSettings,
           revenuePreview: RTXState.admin.revenuePreview
         })
@@ -522,6 +546,7 @@ const RTXAdminPersist = {
 };
 
 RTXAdminPersist.load();
+normalizeRewardPoolTesting();
 
 function normalizeAdminRevenuePreview() {
   if (!RTXState.admin || typeof RTXState.admin !== "object") return;
@@ -620,6 +645,60 @@ function normalizeRewardPoolAdaptive() {
     targetPoolBalance: Math.max(1, Math.floor(target)),
     currentPoolBalance: Math.max(0, Math.floor(current))
   };
+}
+
+function normalizeRewardPoolTesting() {
+  const raw = RTXState.rewardPoolTesting && typeof RTXState.rewardPoolTesting === "object" ? RTXState.rewardPoolTesting : {};
+  const c = Array.isArray(raw.contributions) ? raw.contributions : [];
+  RTXState.rewardPoolTesting = {
+    contributions: c
+      .map((row) => ({
+        ts: Math.max(0, Number(row.ts) || 0),
+        dollars: Math.max(0, Number(row.dollars) || 0),
+        label: String(row.label || "").slice(0, 200)
+      }))
+      .filter((row) => row.dollars > 0 && row.ts > 0)
+      .slice(0, 20)
+  };
+}
+
+/**
+ * Map admin “Test Add N” Premium RevCoin amounts to the same dollar prices as RevCoin store packs ($5 / $10 / $20 / $50).
+ */
+function getSimulatedDollarsForTestCoinGrant(coinsAdded) {
+  const n = Math.max(0, Math.floor(Number(coinsAdded) || 0));
+  if (!n) return 0;
+  const table = { 50: 5, 120: 10, 260: 20, 700: 50 };
+  if (Object.prototype.hasOwnProperty.call(table, n)) return table[n];
+  return Math.round(n * 0.1 * 100) / 100;
+}
+
+/**
+ * Admin-only local testing: pretend `dollars` was paid into the platform.
+ * Increments simulated pool balance and member qualifiedSpend (existing pool projection math unchanged).
+ */
+function recordSimulatedPoolContribution(dollars, label) {
+  if (!isAdminUser() || !RTXState.session || !RTXState.session.isAuthenticated) return false;
+  const d = Math.max(0, Number(dollars) || 0);
+  if (!d) return false;
+  normalizeRewardPoolAdaptive();
+  const curPool = Math.max(0, Math.floor(Number(RTXState.rewardPoolAdaptive.currentPoolBalance) || 0));
+  RTXState.rewardPoolAdaptive.currentPoolBalance = curPool + Math.floor(d);
+  RTXState.user.qualifiedSpend = Math.max(0, Number(RTXState.user.qualifiedSpend) || 0) + d;
+  normalizeRewardPoolTesting();
+  const arr = RTXState.rewardPoolTesting.contributions.slice();
+  arr.unshift({
+    ts: Date.now(),
+    dollars: Math.round(d * 100) / 100,
+    label: String(label || "Simulated contribution").slice(0, 200)
+  });
+  RTXState.rewardPoolTesting.contributions = arr.slice(0, 20);
+  RTXAdminPersist.save();
+  RTXUserPersist.save();
+  if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.pulse === "function") {
+    RewardUX.pulse(`Reward pool +$${Math.round(d * 100) / 100} (test): ${String(label || "").slice(0, 72)}`, "success");
+  }
+  return true;
 }
 
 /**
@@ -1431,7 +1510,12 @@ function applyAdminTestWalletTopUp(creditsAdd, coinsAdd) {
   if (!c && !p) return false;
   RTXState.user.credits = Math.max(0, Number(RTXState.user.credits) || 0) + c;
   RTXState.user.premiumRevCoins = Math.max(0, Number(RTXState.user.premiumRevCoins) || 0) + p;
-  RTXUserPersist.save();
+  if (p > 0) {
+    const usd = getSimulatedDollarsForTestCoinGrant(p);
+    recordSimulatedPoolContribution(usd, `Admin test wallet: +${p} Premium RevCoins ($${usd} simulated)`);
+  } else {
+    RTXUserPersist.save();
+  }
   return true;
 }
 
@@ -1442,7 +1526,11 @@ function applyAdminTestMembership(level) {
   RTXState.user.membershipLevel = next;
   RTXState.user.isPaid = next === "upgraded";
   normalizeMemberCampaigns();
-  RTXUserPersist.save();
+  if (next === "upgraded") {
+    recordSimulatedPoolContribution(10, "Test membership upgrade ($10 simulated)");
+  } else {
+    RTXUserPersist.save();
+  }
   return true;
 }
 
