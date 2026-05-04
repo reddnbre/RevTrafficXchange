@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 6px;
+  gap: 4px;
 }
 
 .app-shell.hyper-mode .surf-viewer-panel {
@@ -50,7 +50,7 @@
   max-height: none;
   height: auto;
   padding: 7px 12px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 
 .app-shell.hyper-mode .surf-cmd-logo-icon {
@@ -77,10 +77,94 @@
 }
 
 .app-shell.hyper-mode .surf-info-bar {
-  margin-top: 8px;
+  margin-top: 4px;
   min-height: 0;
-  padding: 8px 10px;
+  padding: 4px 6px;
+  gap: 4px 6px;
+  align-items: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+.app-shell.hyper-mode .surf-info-item {
+  padding: 3px 7px;
+  font-size: 10px;
+  gap: 4px;
+  line-height: 1.2;
+}
+
+.app-shell.hyper-mode .surf-info-session {
+  flex: 1 1 140px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-shell.hyper-mode .surf-info-title {
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.app-shell.hyper-mode .surf-info-progress {
+  height: 5px;
+}
+
+.app-shell.hyper-mode .surf-info-icon {
+  font-size: 13px;
+}
+
+.app-shell.hyper-mode .surf-info-item.surf-info-spin {
+  max-width: min(200px, 28vw);
+}
+
+.app-shell.hyper-mode .surf-info-item.surf-info-spin > span:last-child {
+  white-space: normal;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Pool projection block — shorter so the iframe column gets more viewport */
+.app-shell.hyper-mode .surf-info-item.surf-pool-projection {
+  padding: 3px 6px;
+  gap: 1px;
+  max-width: min(188px, 34vw);
+}
+
+.app-shell.hyper-mode .surf-pool-projection-title {
+  font-size: 7px;
+  letter-spacing: 0.04em;
+  margin-bottom: 0;
+}
+
+.app-shell.hyper-mode .surf-pool-projection-row {
+  font-size: 8px;
+  line-height: 1.15;
+  gap: 6px;
+}
+
+.app-shell.hyper-mode .surf-pool-projection-reward-row {
+  margin-top: 0;
+}
+
+.app-shell.hyper-mode .surf-pool-projection-reward-row .surf-pool-projection-v {
+  font-size: 10px;
+}
+
+.app-shell.hyper-mode .surf-pool-projection-pending,
+.app-shell.hyper-mode .surf-pool-projection-ineligible {
+  font-size: 8px;
+  margin-top: 0;
+  line-height: 1.15;
+}
+
+.app-shell.hyper-mode .surf-pool-projection-disclaimer {
+  font-size: 6px;
+  margin-top: 1px;
+  line-height: 1.15;
+}
+
+.app-shell.hyper-mode .reward-ux-surf-strip--compact {
+  margin-bottom: 4px;
 }
 
 .app-shell.hyper-mode .surf-viewer-panel.panel {
