@@ -71,8 +71,9 @@ const SurfEngine = {
     this.isRunning = false;
   },
 
+  /** View timer length (seconds) — industry TEs commonly use ~8s visible exposure (e.g. Rotate5url-style surf). */
   getMembershipSurfSeconds() {
-    return RTXState.user.membershipLevel === "upgraded" ? 8 : 12;
+    return 8;
   },
 
   buildSurfPrimaryActionHtml() {
@@ -112,6 +113,16 @@ const SurfEngine = {
     return true;
   },
 
+  /** Update Hyper Mode chrome without `App.render()` so the surf iframe is not recreated. */
+  refreshSurfIfLive() {
+    if (!this.canPatchSurfDom()) return false;
+    this.patchSurfRuntimeUI();
+    if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.refreshToast === "function") {
+      RewardUX.refreshToast();
+    }
+    return true;
+  },
+
   patchSurfRuntimeUI() {
     if (!this.canPatchSurfDom()) return false;
 
@@ -140,7 +151,12 @@ const SurfEngine = {
     if (btn) btn.outerHTML = this.buildSurfPrimaryActionHtml();
 
     const creditsPill = document.getElementById("surf-credits-pill");
-    if (creditsPill) creditsPill.textContent = `Credits: ${u.credits}`;
+    if (creditsPill) {
+      creditsPill.textContent = `Credits: ${u.credits}`;
+      if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.getSurfCreditsWalletTooltip === "function") {
+        creditsPill.setAttribute("title", RewardUX.getSurfCreditsWalletTooltip());
+      }
+    }
 
     const multPill = document.getElementById("surf-multiplier-pill");
     if (multPill) {
@@ -188,6 +204,15 @@ const SurfEngine = {
     this.updateAntiCheatStatusDisplay();
     this.updateAntiCheatPopupDisplay();
     this.updateProjectedPoolRewardUI();
+
+    const stripRoot = document.getElementById("reward-ux-surf-strip-root");
+    if (stripRoot && typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.renderSurfStrip === "function") {
+      const nextStrip = RewardUX.renderSurfStrip();
+      if (nextStrip && String(nextStrip).trim()) {
+        stripRoot.outerHTML = nextStrip;
+      }
+    }
+
     return true;
   },
 
@@ -224,8 +249,6 @@ const SurfEngine = {
 
       if (RTXState.currentView === "surf") {
         this.updateTimerDisplay();
-      } else {
-        App.render();
       }
 
       if (this.secondsLeft <= 0) {
@@ -348,7 +371,11 @@ const SurfEngine = {
       this.showAntiCheatPopup(message);
     }
 
-    App.render();
+    if (!this.refreshSurfIfLive()) {
+      if (typeof App !== "undefined" && App && typeof App.render === "function") {
+        App.render();
+      }
+    }
   },
 
   startTimer() {
@@ -474,8 +501,10 @@ const SurfEngine = {
     if (!validation.valid) {
       if (validation.restartTimer) {
         this.startTimer();
-      } else {
-        App.render();
+      } else if (!this.refreshSurfIfLive()) {
+        if (typeof App !== "undefined" && App && typeof App.render === "function") {
+          App.render();
+        }
       }
       return;
     }

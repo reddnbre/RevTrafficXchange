@@ -6,6 +6,26 @@ const RewardUX = {
   _toastTimer: null,
   TOAST_MS: 4200,
 
+  ensureToastHost() {
+    let el = document.getElementById("rtx-reward-toast-host");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "rtx-reward-toast-host";
+      document.body.appendChild(el);
+    }
+    return el;
+  },
+
+  refreshToast() {
+    const host = this.ensureToastHost();
+    host.innerHTML = this.renderToast();
+  },
+
+  /** Hyper Mode credits pill tooltip (kept in sync when SurfEngine patches DOM). */
+  getSurfCreditsWalletTooltip() {
+    return 'Wallet: traffic credits you already own and can spend. "Today banked" above counts the same credits toward your daily stats and tier. There is no separate uncredited balance in this demo.';
+  },
+
   esc(s) {
     return typeof App !== "undefined" && App && typeof App.escapeHtml === "function"
       ? App.escapeHtml(s)
@@ -24,15 +44,11 @@ const RewardUX = {
       this._toastTimer = null;
     }
     RTXState.ui.rewardToast = { message: msg, tone: tone || "success" };
-    if (typeof App !== "undefined" && App && typeof App.render === "function") {
-      App.render();
-    }
+    this.refreshToast();
     this._toastTimer = setTimeout(() => {
       this._toastTimer = null;
       if (RTXState.ui) RTXState.ui.rewardToast = null;
-      if (typeof App !== "undefined" && App && typeof App.render === "function") {
-        App.render();
-      }
+      this.refreshToast();
     }, this.TOAST_MS);
   },
 
@@ -285,7 +301,7 @@ const RewardUX = {
             ? `Session active: ${credits.vps} views in this run at +${credits.per} each. "This session" stays 0 until your first claim.`
             : "Start a session and claim views to add session credits. After Start next session, this line begins at zero again.";
     return `
-      <div class="reward-ux-surf-strip reward-ux-surf-strip--compact" role="region" aria-label="Session and earnings">
+      <div id="reward-ux-surf-strip-root" class="reward-ux-surf-strip reward-ux-surf-strip--compact" role="region" aria-label="Session and earnings">
         <div class="reward-ux-surf-strip__row">
           <div class="reward-ux-surf-strip__earnings" title="${this.esc(bankedTitle)}">
             <span class="reward-ux-surf-strip__label">Today</span>

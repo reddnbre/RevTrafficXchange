@@ -30,7 +30,9 @@ function SurfPageComponent() {
   const boostLabel = boostPct > 0 ? `+${boostPct}%${boostTimeLeft ? ` (${boostTimeLeft})` : ""}` : "+0%";
 
   const creditsWalletTitle =
-    'Wallet: traffic credits you already own and can spend. "Today banked" above counts the same credits toward your daily stats and tier. There is no separate uncredited balance in this demo.';
+    typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.getSurfCreditsWalletTooltip === "function"
+      ? RewardUX.getSurfCreditsWalletTooltip()
+      : 'Wallet: traffic credits you already own and can spend.';
   const escAttr =
     typeof escapeHtmlAttr === "function"
       ? escapeHtmlAttr(creditsWalletTitle)

@@ -1,5 +1,19 @@
 /* Reward experience layer — readouts, urgency, toast (no payout math) */
 
+#rtx-reward-toast-host {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 12500;
+  max-width: 100vw;
+  pointer-events: none;
+}
+
+#rtx-reward-toast-host .reward-ux-toast {
+  pointer-events: auto;
+  margin: 20px;
+}
+
 .reward-ux-toast {
   position: fixed;
   right: 20px;

@@ -91,7 +91,7 @@ const RTXState = {
   },
 
   settings: {
-    adTimerSeconds: 12,
+    adTimerSeconds: 8,
     viewsPerSession: 25,
     baseCreditsPerView: 1
   },

@@ -6,7 +6,17 @@ const CreditSystem = {
       recordMemberCreditEarnings(n);
     }
     RTXUserPersist.save();
-    App.render();
+    if (
+      typeof SurfEngine !== "undefined" &&
+      SurfEngine &&
+      typeof SurfEngine.refreshSurfIfLive === "function" &&
+      SurfEngine.refreshSurfIfLive()
+    ) {
+      return;
+    }
+    if (typeof App !== "undefined" && App && typeof App.render === "function") {
+      App.render();
+    }
   },
 
   getCreditsForValidView() {

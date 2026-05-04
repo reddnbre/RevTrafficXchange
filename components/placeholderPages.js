@@ -269,7 +269,13 @@ const TrafficBoostCountdown = {
         if (typeof SurfEngine !== "undefined" && SurfEngine.refreshCampaignQueue) {
           SurfEngine.refreshCampaignQueue();
         }
-        App.render();
+        if (
+          typeof SurfEngine === "undefined" ||
+          !SurfEngine.refreshSurfIfLive ||
+          !SurfEngine.refreshSurfIfLive()
+        ) {
+          App.render();
+        }
         return;
       }
       this.updateDisplay();

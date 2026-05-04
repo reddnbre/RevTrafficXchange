@@ -470,11 +470,13 @@ const App = {
         </footer>
         ${typeof RewardsAcknowledgmentComponent === "function" ? RewardsAcknowledgmentComponent() : ""}
         ${LoadingScreen.render()}
-        ${typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.renderToast === "function" ? RewardUX.renderToast() : ""}
       </div>
     `;
     if (typeof GameModal !== "undefined" && GameModal && typeof GameModal.refresh === "function") {
       GameModal.refresh();
+    }
+    if (typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.refreshToast === "function") {
+      RewardUX.refreshToast();
     }
     if (typeof queueMicrotask === "function") {
       queueMicrotask(() => {
