@@ -350,27 +350,12 @@ const AdminBackOffice = {
     const used = Math.max(0, Number(RTXState.user && RTXState.user.miniGameDailyRewardLedger && RTXState.user.miniGameDailyRewardLedger.creditsEquiv) || 0);
     const capOk = dailyCapNum !== null && dailyCapNum > 0;
     const remaining = capOk ? Math.max(0, dailyCapNum - used) : null;
-    let status = "Not Available";
-    let statusKey = "na";
-    if (capOk) {
-      const ratio = used / dailyCapNum;
-      if (ratio < 0.6) {
-        status = "Healthy";
-        statusKey = "healthy";
-      } else if (ratio < 0.9) {
-        status = "Watch";
-        statusKey = "watch";
-      } else {
-        status = "Risk";
-        statusKey = "risk";
-      }
-    }
     return {
       dailyCapDisplay: capOk ? String(Math.round(dailyCapNum * 100) / 100) : "Not Available",
       usedDisplay: String(Math.round(used * 100) / 100),
       remainingDisplay: remaining === null ? "Not Available" : String(Math.round(remaining * 100) / 100),
-      status,
-      statusKey
+      status: "Surf mini-games not pool-capped",
+      statusKey: "healthy"
     };
   },
 
@@ -915,7 +900,7 @@ const AdminBackOffice = {
     const mon = this.getMiniGameSafetyMonitorSnapshot();
     return `
       <h3>Mini-Game Economy</h3>
-      <p>Adjust surf mini-game trigger rates and reward tuning. Values persist in local admin storage and apply to the next mini-game trigger.</p>
+      <p>Adjust surf mini-game trigger rates and reward tuning. Values persist in local admin storage and apply to the next mini-game trigger. Premium RevCoins from surf mini-games use a fixed ~2% chance per hit (the Perfect / Good coin % fields below are not used for that path).</p>
       <div class="admin-minigame-form-wrap">
         <div class="admin-minigame-grid">
           <label>
@@ -1048,15 +1033,15 @@ const AdminBackOffice = {
             <span class="admin-minigame-safety-value">${mon.notionalPool}</span>
           </div>
           <div class="admin-minigame-safety-row">
-            <span class="admin-minigame-safety-label">Daily Reward Cap</span>
+            <span class="admin-minigame-safety-label">Pool-reference daily cap (not enforced on surf)</span>
             <span class="admin-minigame-safety-value">${mon.dailyCapDisplay}</span>
           </div>
           <div class="admin-minigame-safety-row">
-            <span class="admin-minigame-safety-label">Daily Rewards Used</span>
+            <span class="admin-minigame-safety-label">Today's mini-game payout tally (stats)</span>
             <span class="admin-minigame-safety-value">${mon.dailyUsedDisplay}</span>
           </div>
           <div class="admin-minigame-safety-row">
-            <span class="admin-minigame-safety-label">Daily Rewards Remaining</span>
+            <span class="admin-minigame-safety-label">Versus pool-reference cap (informational)</span>
             <span class="admin-minigame-safety-value">${mon.dailyRemainingDisplay}</span>
           </div>
           <div class="admin-minigame-safety-row">
@@ -1086,7 +1071,7 @@ const AdminBackOffice = {
             }</span>
           </div>
         </div>
-        <p class="admin-minigame-safety-foot">Admin Safety Monitor — display only.</p>
+        <p class="admin-minigame-safety-foot">Surf mini-game rewards are virtual (credits / boost / Premium RevCoins in this demo). They are not limited by the pool-reference daily cap; rarity is driven by weighted rolls and the per-round max credits-equivalent above.</p>
       </div>
     `;
   },
@@ -1155,11 +1140,12 @@ const AdminBackOffice = {
       </div>
 
       <div class="admin-system-health-section panel">
-        <h4>Section 4: Mini-Game Safety</h4>
+        <h4>Section 4: Mini-Game Reference</h4>
+        <p class="admin-system-health-muted">Pool-derived numbers below are for comparison with reward-pool math only. Surf mini-game payouts are not blocked by this daily figure.</p>
         <ul class="admin-system-health-lines">
-          <li><span>Mini-game Daily Reward Cap</span><span>${mg.dailyCapDisplay}</span></li>
-          <li><span>Mini-game Rewards Used Today</span><span>${mg.usedDisplay}</span></li>
-          <li><span>Mini-game Rewards Remaining</span><span>${mg.remainingDisplay}</span></li>
+          <li><span>Pool-reference daily cap (credits-equiv)</span><span>${mg.dailyCapDisplay}</span></li>
+          <li><span>Mini-game payout tally today (credits-equiv)</span><span>${mg.usedDisplay}</span></li>
+          <li><span>Remaining vs reference cap (informational)</span><span>${mg.remainingDisplay}</span></li>
         </ul>
       </div>
 
@@ -1170,10 +1156,9 @@ const AdminBackOffice = {
           <span class="admin-system-health-status-pill ${mg.statusKey}">${mg.status}</span>
         </p>
         <ul class="admin-system-health-legend">
-          <li><strong>Healthy</strong> — rewards are within safe range.</li>
-          <li><strong>Watch</strong> — rewards are approaching daily limit.</li>
-          <li><strong>Risk</strong> — rewards are near or above daily limit.</li>
-          <li><strong>Not Available</strong> — daily cap is zero or unavailable.</li>
+          <li><strong>Surf mini-games not pool-capped</strong> — member mini-game rewards use weighted rarity and a per-round ceiling, not a daily dollar budget.</li>
+          <li><strong>Pool-reference cap</strong> — Section 4 ties to simulated pool release math for admins who want to compare scale.</li>
+          <li><strong>Not Available</strong> — reference cap could not be computed from current settings.</li>
         </ul>
       </div>
 

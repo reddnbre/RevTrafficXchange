@@ -81,37 +81,17 @@ const MiniGameSystem = {
     return c + co * coinEq + boostEq;
   },
 
-  getEffectiveCoinDropPercents(outcomeKey, perfectPct, goodPct) {
-    const sg = this.getMiniGameProfitSafeguardsResolved();
-    const perfect = Math.max(0, Math.min(100, Number(perfectPct) || 0));
-    let good = Math.max(0, Math.min(100, Number(goodPct) || 0));
-    const throttleAfter = Math.max(0, Math.floor(Number(sg.softThrottleAfterGrants) || 0));
-    const delta = Math.max(0, Number(sg.softThrottleCoinGoodDelta) || 0);
-    if (
-      throttleAfter > 0 &&
-      this._miniGameSessionGrantCount >= throttleAfter &&
-      (outcomeKey === "good" || outcomeKey === "hit")
-    ) {
-      good = Math.max(0, good - delta);
-    }
-    return { perfectPct: perfect, goodPct: good };
-  },
-
   /**
-   * Applies credits / coin / boost with per-game and daily caps (credits equivalent).
+   * Applies credits / coin / boost with a per-round credits-equivalent ceiling only.
+   * Surf mini-games are not throttled by pool-derived daily caps (non-monetary play rewards).
    * Returns a rewardResult-shaped object (without audit — caller merges audit).
    */
   executeMiniGameGrant(plan) {
     if (typeof normalizeMiniGameUserRewardLedger === "function") normalizeMiniGameUserRewardLedger();
     this.syncMiniGameSessionGrantCounter();
     const sg = this.getMiniGameProfitSafeguardsResolved();
-    const perGameCap = Math.max(1, Number(sg.maxCreditsEquivPerMiniGame) || 80);
-    const dailyCap =
-      typeof getMiniGameDailyRewardCapCreditsEquiv === "function" ? getMiniGameDailyRewardCapCreditsEquiv() : 1e12;
-    const ledger = RTXState.user.miniGameDailyRewardLedger || { date: "", creditsEquiv: 0 };
-    const usedToday = Math.max(0, Number(ledger.creditsEquiv) || 0);
-    const remainingDaily = Math.max(0, dailyCap - usedToday);
-    const maxEquiv = Math.max(0, Math.min(perGameCap, remainingDaily));
+    const perGameCap = Math.max(1, Number(sg.maxCreditsEquivPerMiniGame) || 500);
+    const maxEquiv = perGameCap;
 
     let credits = Math.max(0, Math.floor(Number(plan.creditsDelta) || 0));
     let coins = Math.max(0, Math.floor(Number(plan.coinDelta) || 0));
@@ -133,7 +113,7 @@ const MiniGameSystem = {
 
     if (eq === 0 && ((plan.creditsDelta || 0) > 0 || (plan.coinDelta || 0) > 0 || plan.boostRequested)) {
       return {
-        label: "Hit registered—no bonus this round.",
+        label: "That payout exceeds this mini-game's per-round safety ceiling (raise max credits-equivalent in admin safeguards if needed).",
         tone: "info",
         creditsDelta: 0,
         boostApplied: false,
@@ -992,6 +972,20 @@ const MiniGameSystem = {
     return Math.floor(Math.random() * (high - low + 1)) + low;
   },
 
+  /** Bias credit rolls: low = common small bundles, high = rarer bigger bundles. */
+  pickBiasedCreditAmount(lo, hi, bias) {
+    const loI = Math.max(1, Math.floor(Number(lo) || 1));
+    const hiI = Math.max(loI, Math.floor(Number(hi) || loI));
+    if (loI === hiI) return loI;
+    if (bias === "low") {
+      return Math.min(this.randomInt(loI, hiI), this.randomInt(loI, hiI));
+    }
+    if (bias === "high") {
+      return Math.max(this.randomInt(loI, hiI), this.randomInt(loI, hiI));
+    }
+    return this.randomInt(loI, hiI);
+  },
+
   getRewardAuditSnapshot() {
     const credits = Math.max(0, Number(RTXState.user.credits) || 0);
     const coins = Math.max(0, Number(RTXState.user.premiumRevCoins) || 0);
@@ -1105,8 +1099,8 @@ const MiniGameSystem = {
     const lo = Math.max(1, Math.floor(Number(s.creditMin) || 2));
     const hi = Math.max(lo, Math.floor(Number(s.creditMax) || 5));
     const rewardRoll = Math.random();
-    if (rewardRoll < 0.57) {
-      const amount = this.randomInt(lo, hi);
+    if (rewardRoll < 0.5) {
+      const amount = this.pickBiasedCreditAmount(lo, hi, "low");
       return {
         kind: "credits",
         creditsDelta: amount,
@@ -1116,7 +1110,18 @@ const MiniGameSystem = {
         tone: "success"
       };
     }
-    if (rewardRoll < 0.85) {
+    if (rewardRoll < 0.72) {
+      const amount = this.pickBiasedCreditAmount(lo, hi, "mid");
+      return {
+        kind: "credits",
+        creditsDelta: amount,
+        coinDelta: 0,
+        boostRequested: false,
+        label: `You earned +${amount} traffic credits!`,
+        tone: "success"
+      };
+    }
+    if (rewardRoll < 0.86) {
       return {
         kind: "boost",
         creditsDelta: 0,
@@ -1126,7 +1131,18 @@ const MiniGameSystem = {
         tone: "info"
       };
     }
-    const amount = this.randomInt(lo, Math.min(hi, lo + 2));
+    if (rewardRoll < 0.94) {
+      const amount = this.pickBiasedCreditAmount(lo, hi, "high");
+      return {
+        kind: "credits",
+        creditsDelta: amount,
+        coinDelta: 0,
+        boostRequested: false,
+        label: `You earned +${amount} traffic credits!`,
+        tone: "success"
+      };
+    }
+    const amount = this.pickBiasedCreditAmount(lo, hi, "high");
     return {
       kind: "combo",
       creditsDelta: amount,
@@ -1167,26 +1183,9 @@ const MiniGameSystem = {
         audit: { before, after: this.getRewardAuditSnapshot() }
       };
     }
-    const s = this.getMiniGameRewardConfig();
-    const noRewardPct = Math.max(0, Math.min(100, Number(s.noRewardPercent) || 0));
-    if (Math.random() * 100 < noRewardPct) {
-      return {
-        label: "Hit registered—no bonus this round.",
-        tone: "info",
-        creditsDelta: 0,
-        boostApplied: false,
-        coinDelta: 0,
-        audit: { before, after: this.getRewardAuditSnapshot() }
-      };
-    }
-    const tier = outcomeKey === "perfect" ? "perfect" : "good";
-    const eff = this.getEffectiveCoinDropPercents(
-      outcomeKey,
-      Math.max(0, Math.min(100, Number(s.coinDropPerfectPercent) || 0)),
-      Math.max(0, Math.min(100, Number(s.coinDropGoodPercent) || 0))
-    );
-    const coinPct = tier === "perfect" ? eff.perfectPct : eff.goodPct;
-    if (Math.random() * 100 < coinPct) {
+    /** Premium RevCoin from surf mini-games: rare (~2% per hit), independent of admin coin % fields. */
+    const miniGameRevCoinChance = 0.02;
+    if (Math.random() < miniGameRevCoinChance) {
       const granted = this.executeMiniGameGrant({
         kind: "coin",
         creditsDelta: 0,

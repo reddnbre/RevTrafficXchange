@@ -138,7 +138,7 @@ const RTXState = {
   /** Internal caps for mini-game payouts; not shown in member UI. */
   miniGameProfitSafeguards: {
     notionalPoolBalance: 10000,
-    maxCreditsEquivPerMiniGame: 80,
+    maxCreditsEquivPerMiniGame: 500,
     coinCreditsEquiv: 35,
     boostApplyCreditsEquiv: 12,
     softThrottleAfterGrants: 10,
@@ -987,7 +987,7 @@ normalizeMiniGameProfitSafeguards();
 function normalizeMiniGameProfitSafeguards() {
   const defaults = {
     notionalPoolBalance: 10000,
-    maxCreditsEquivPerMiniGame: 80,
+    maxCreditsEquivPerMiniGame: 500,
     coinCreditsEquiv: 35,
     boostApplyCreditsEquiv: 12,
     softThrottleAfterGrants: 10,
@@ -1027,8 +1027,9 @@ function normalizeMiniGameUserRewardLedger() {
 }
 
 /**
- * Daily mini-game budget in abstract "credits equivalent" units, aligned with
- * rewardPoolSettings: distributable slice × reward pool % × cycle release % × daily release %.
+ * Reference-only daily figure in abstract "credits equivalent" units, derived from
+ * rewardPoolSettings + notional pool (distributable slice × reward pool % × cycle × daily).
+ * Surf mini-game grants do not use this as a hard cap — see MiniGameSystem.executeMiniGameGrant.
  */
 function getMiniGameDailyRewardCapCreditsEquiv() {
   normalizeRewardPoolSettings();
