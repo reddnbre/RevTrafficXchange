@@ -2,45 +2,62 @@ const GameModal = {
   currentReward: null,
   visible: false,
   animating: false,
-  _drawTimer: null,
+  _sessionId: 0,
+  _slotIndex: null,
+  _revealProgress: 0,
 
   showHyperSpin() {
-    if (this._drawTimer) {
-      clearTimeout(this._drawTimer);
-      this._drawTimer = null;
-    }
+    this._sessionId += 1;
     this.visible = true;
     this.currentReward = null;
     this.animating = false;
+    this._slotIndex = null;
+    this._revealProgress = 0;
     App.render();
   },
 
   spin() {
     if (this.animating) return;
     const picked = HyperSpin.pickWinningSegment();
+    const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
+    const n = Math.max(1, segments.length);
+
     this.animating = true;
+    this._revealProgress = 0;
+    this._slotIndex = Math.floor(Math.random() * n);
+    this._sessionId += 1;
+    const sid = this._sessionId;
     App.render();
 
-    const finish = () => {
-      this._drawTimer = null;
-      HyperSpin.applyReward(picked.segment, true);
-      this.currentReward = picked.segment;
-      this.animating = false;
-      RTXUserPersist.save();
-      App.render();
-    };
-
-    this._drawTimer = setTimeout(finish, 550);
+    HyperSpin.runDrawReveal({
+      winningIndex: picked.winningIndex,
+      isCancelled: () => sid !== this._sessionId || !this.visible,
+      onTick: (idx, progress) => {
+        if (sid !== this._sessionId) return;
+        this._slotIndex = idx;
+        this._revealProgress = progress;
+        App.render();
+      },
+      onComplete: () => {
+        if (sid !== this._sessionId) return;
+        HyperSpin.applyReward(picked.segment, true);
+        this.currentReward = picked.segment;
+        this.animating = false;
+        this._slotIndex = null;
+        this._revealProgress = 0;
+        RTXUserPersist.save();
+        App.render();
+      }
+    });
   },
 
   close() {
-    if (this._drawTimer) {
-      clearTimeout(this._drawTimer);
-      this._drawTimer = null;
-    }
+    this._sessionId += 1;
     this.visible = false;
     this.currentReward = null;
     this.animating = false;
+    this._slotIndex = null;
+    this._revealProgress = 0;
     App.render();
   },
 
@@ -48,14 +65,35 @@ const GameModal = {
     if (!this.visible) return "";
 
     const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
+    const spinning = this.animating;
+    const slotIdx = typeof this._slotIndex === "number" ? this._slotIndex : 0;
+    const slotLabel =
+      segments[slotIdx] && segments[slotIdx].label ? String(segments[slotIdx].label) : "—";
+    const esc = typeof escapeHtmlAttr === "function" ? escapeHtmlAttr : (s) => String(s);
+
     const poolList =
       segments.length && !this.currentReward
-        ? `<ul class="rtx-hyper-prize-pool" aria-label="Possible rewards">${segments
-            .map((s) => `<li>${typeof escapeHtmlAttr === "function" ? escapeHtmlAttr(s.label || "") : s.label || ""}</li>`)
+        ? `<ul class="rtx-hyper-prize-pool${spinning ? " rtx-hyper-prize-pool--during" : ""}" aria-label="Possible rewards">${segments
+            .map(
+              (s, i) =>
+                `<li class="${spinning && i === slotIdx ? "rtx-hyper-prize-row--lit" : ""}">${esc(s.label || "")}</li>`
+            )
             .join("")}</ul>`
         : "";
 
-    const spinning = this.animating;
+    const slotFrame =
+      !this.currentReward
+        ? `
+        <div class="rtx-hyper-slot ${spinning ? "rtx-hyper-slot--running" : "rtx-hyper-slot--idle"}" aria-live="polite">
+          <div class="rtx-hyper-slot__badge">Hyper Spin</div>
+          <div class="rtx-hyper-slot__icon" aria-hidden="true">⚡</div>
+          <div class="rtx-hyper-slot__label ${spinning && this._revealProgress < 0.82 ? "rtx-hyper-slot__label--blur" : ""}">${esc(
+            spinning ? slotLabel : "Ready when you are"
+          )}</div>
+          <div class="rtx-hyper-slot__sub">${spinning ? "Locking in your reward…" : "Weighted draw from the pool below"}</div>
+        </div>
+      `
+        : "";
 
     const wonLabel =
       this.currentReward && this.currentReward.label ? String(this.currentReward.label) : "";
@@ -65,20 +103,15 @@ const GameModal = {
         <div class="modal rtx-hyper-modal">
           <h2>Hyper Spin Unlocked</h2>
           <p class="rtx-hyper-modal-sub">
-            Session complete. Draw a random bonus from the pool below.
+            Session complete — one bonus draw, same odds as the Hyper Spin page.
           </p>
 
+          ${slotFrame}
           ${poolList}
 
           ${
-            spinning
-              ? `<div class="rtx-hyper-drawing-hint" aria-live="polite">Drawing reward…</div>`
-              : ""
-          }
-
-          ${
             this.currentReward
-              ? `<div class="rtx-hyper-result-card">You won: ${typeof escapeHtmlAttr === "function" ? escapeHtmlAttr(wonLabel) : wonLabel}</div>`
+              ? `<div class="rtx-hyper-result-card rtx-hyper-result-card--pop">You won: ${esc(wonLabel)}</div>`
               : ""
           }
 

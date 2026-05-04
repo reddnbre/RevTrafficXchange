@@ -1,4 +1,115 @@
-/* Hyper Spin — modal + page (no wheel; weighted draw from HyperSpin.rewards) */
+/* Hyper Spin — draw reveal + pool (no wheel) */
+
+.rtx-hyper-slot {
+  position: relative;
+  border-radius: 18px;
+  padding: 18px 16px 20px;
+  margin: 0 0 16px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 0%, rgba(249, 115, 22, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(0, 0, 0, 0.28) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.rtx-hyper-slot::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(249, 115, 22, 0.35),
+    rgba(59, 130, 246, 0.35),
+    rgba(249, 115, 22, 0.35)
+  );
+  opacity: 0;
+  animation: rtx-hyper-slot-orbit 2.4s linear infinite;
+  pointer-events: none;
+}
+
+.rtx-hyper-slot--running::before {
+  opacity: 0.45;
+}
+
+.rtx-hyper-slot--running {
+  box-shadow:
+    0 0 0 1px rgba(249, 115, 22, 0.35),
+    0 0 32px rgba(249, 115, 22, 0.12),
+    0 0 48px rgba(59, 130, 246, 0.08);
+}
+
+@keyframes rtx-hyper-slot-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rtx-hyper-slot__badge {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(249, 115, 22, 0.95);
+  margin-bottom: 6px;
+}
+
+.rtx-hyper-slot__icon {
+  position: relative;
+  z-index: 1;
+  font-size: 1.75rem;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.45));
+  animation: rtx-hyper-bolt 0.85s ease-in-out infinite;
+}
+
+.rtx-hyper-slot--idle .rtx-hyper-slot__icon {
+  animation: none;
+  opacity: 0.75;
+}
+
+@keyframes rtx-hyper-bolt {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.rtx-hyper-slot__label {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(1.15rem, 4.5vw, 1.55rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text, #fff);
+  line-height: 1.25;
+  min-height: 2.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.12s ease;
+}
+
+.rtx-hyper-slot__label--blur {
+  filter: blur(0.45px);
+  opacity: 0.92;
+}
+
+.rtx-hyper-slot__sub {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted, rgba(255, 255, 255, 0.55));
+}
 
 .rtx-hyper-prize-pool {
   list-style: none;
@@ -9,18 +120,32 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   max-height: 200px;
   overflow-y: auto;
+  transition: opacity 0.2s ease;
+}
+
+.rtx-hyper-prize-pool--during {
+  opacity: 0.88;
 }
 
 .rtx-hyper-prize-pool li {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--muted, rgba(255, 255, 255, 0.72));
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 10px;
+  margin: 2px 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition:
+    background 0.08s ease,
+    border-color 0.08s ease,
+    color 0.08s ease;
 }
 
-.rtx-hyper-prize-pool li:last-child {
-  border-bottom: none;
+.rtx-hyper-prize-row--lit {
+  color: var(--text, #fff);
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.45);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.12) inset;
 }
 
 .rtx-hyper-drawing-hint {
@@ -55,6 +180,24 @@
   color: var(--text, #fff);
   text-align: center;
   line-height: 1.4;
+}
+
+.rtx-hyper-result-card--pop {
+  animation: rtx-hyper-result-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes rtx-hyper-result-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .rtx-hyper-modal-overlay.modal-overlay {
@@ -99,5 +242,5 @@
 }
 
 .hyperspin-panel .rtx-hyper-prize-pool {
-  margin-top: 4px;
+  margin-top: 2px;
 }

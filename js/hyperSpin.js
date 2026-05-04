@@ -11,7 +11,7 @@ const HyperSpin = {
   ],
 
   /**
-   * Weighted random segment index. `rewards` order = visual order clockwise from top pointer.
+   * Weighted random segment index.
    * @returns {{ winningIndex: number, segment: object }}
    */
   pickWinningSegment() {
@@ -57,6 +57,49 @@ const HyperSpin = {
       App.render();
     }
     return reward;
+  },
+
+  /**
+   * Decelerating “slot” ticks ending on `winningIndex` (chosen before calling this).
+   * @param {{ winningIndex: number, isCancelled?: () => boolean, onTick?: (index: number, progress01: number) => void, onComplete?: () => void }} opts
+   */
+  runDrawReveal(opts) {
+    const o = opts || {};
+    const winningIndex = o.winningIndex;
+    const isCancelled = typeof o.isCancelled === "function" ? o.isCancelled : () => false;
+    const onTick = typeof o.onTick === "function" ? o.onTick : null;
+    const onComplete = typeof o.onComplete === "function" ? o.onComplete : null;
+    const segments = this.rewards;
+    const n = segments.length;
+    if (n < 1 || typeof winningIndex !== "number" || winningIndex < 0 || winningIndex >= n) {
+      if (onComplete) onComplete();
+      return;
+    }
+    const minSteps = 20;
+    const maxSteps = 34;
+    const stepCount = minSteps + Math.floor(Math.random() * (maxSteps - minSteps + 1));
+    const seq = [];
+    for (let i = 0; i < stepCount - 1; i++) {
+      seq.push(Math.floor(Math.random() * n));
+    }
+    seq.push(winningIndex);
+
+    let i = 0;
+    const step = () => {
+      if (isCancelled()) return;
+      if (i >= seq.length) {
+        setTimeout(() => {
+          if (!isCancelled() && onComplete) onComplete();
+        }, 400);
+        return;
+      }
+      const progress = i / Math.max(1, seq.length - 1);
+      if (onTick) onTick(seq[i], progress);
+      const delay = 24 + Math.floor(progress * progress * 280);
+      i++;
+      setTimeout(step, delay);
+    };
+    step();
   }
 };
 

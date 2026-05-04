@@ -1599,7 +1599,9 @@ const HyperSpinPageUI = {
   lastReward: "",
   lastTone: "neutral",
   resolving: false,
-  _drawTimer: null,
+  _sessionId: 0,
+  _slotIndex: null,
+  _revealProgress: 0,
 
   useSpin() {
     if (this.resolving) return;
@@ -1618,20 +1620,40 @@ const HyperSpinPageUI = {
     }
 
     const picked = HyperSpin.pickWinningSegment();
+    const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
+    const n = Math.max(1, segments.length);
+
     RTXState.user.hyperSpins = currentSpins - 1;
     RTXUserPersist.save();
     this.resolving = true;
+    this._revealProgress = 0;
+    this._slotIndex = Math.floor(Math.random() * n);
+    this._sessionId += 1;
+    const sid = this._sessionId;
     App.render();
 
-    if (this._drawTimer) clearTimeout(this._drawTimer);
-    this._drawTimer = setTimeout(() => {
-      this._drawTimer = null;
-      HyperSpin.applyReward(picked.segment, true);
-      this._recordSpinSuccess(picked.segment);
-      this.resolving = false;
-      RTXUserPersist.save();
-      App.render();
-    }, 550);
+    HyperSpin.runDrawReveal({
+      winningIndex: picked.winningIndex,
+      isCancelled: () => sid !== this._sessionId,
+      onTick: (idx, progress) => {
+        if (sid !== this._sessionId) return;
+        this._slotIndex = idx;
+        this._revealProgress = progress;
+        if (typeof RTXState !== "undefined" && RTXState.currentView === "hyper-spin") {
+          App.render();
+        }
+      },
+      onComplete: () => {
+        if (sid !== this._sessionId) return;
+        HyperSpin.applyReward(picked.segment, true);
+        this._recordSpinSuccess(picked.segment);
+        this.resolving = false;
+        this._slotIndex = null;
+        this._revealProgress = 0;
+        RTXUserPersist.save();
+        App.render();
+      }
+    });
   },
 
   _recordSpinSuccess(reward) {
@@ -1652,11 +1674,31 @@ function HyperSpinPageComponent() {
   const recentSpins = Array.isArray(RTXState.user.recentHyperSpinHistory) ? RTXState.user.recentHyperSpinHistory : [];
   const busy = HyperSpinPageUI.resolving;
   const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
+  const slotIdx = typeof HyperSpinPageUI._slotIndex === "number" ? HyperSpinPageUI._slotIndex : 0;
+  const slotLabel =
+    segments[slotIdx] && segments[slotIdx].label ? String(segments[slotIdx].label) : "—";
+  const revealP = Number(HyperSpinPageUI._revealProgress) || 0;
   const poolList =
     segments.length > 0
-      ? `<ul class="rtx-hyper-prize-pool" aria-label="Possible rewards">${segments
-          .map((s) => `<li>${escapeHtmlAttr(s.label || "")}</li>`)
+      ? `<ul class="rtx-hyper-prize-pool${busy ? " rtx-hyper-prize-pool--during" : ""}" aria-label="Possible rewards">${segments
+          .map(
+            (s, i) =>
+              `<li class="${busy && i === slotIdx ? "rtx-hyper-prize-row--lit" : ""}">${escapeHtmlAttr(s.label || "")}</li>`
+          )
           .join("")}</ul>`
+      : "";
+  const slotFrame =
+    spins > 0 || busy
+      ? `
+        <div class="rtx-hyper-slot ${busy ? "rtx-hyper-slot--running" : "rtx-hyper-slot--idle"}" aria-live="polite">
+          <div class="rtx-hyper-slot__badge">Hyper Spin</div>
+          <div class="rtx-hyper-slot__icon" aria-hidden="true">⚡</div>
+          <div class="rtx-hyper-slot__label ${busy && revealP < 0.82 ? "rtx-hyper-slot__label--blur" : ""}">${escapeHtmlAttr(
+            busy ? slotLabel : "Tap draw to roll the pool"
+          )}</div>
+          <div class="rtx-hyper-slot__sub">${busy ? "Slowing to your prize…" : "Same weighted odds every time"}</div>
+        </div>
+      `
       : "";
   return `
     <section class="revcoin-store-page">
@@ -1670,9 +1712,10 @@ function HyperSpinPageComponent() {
 
       <section class="panel hyperspin-panel">
         <h3>Draw a reward</h3>
-        <p class="my-sites-subtitle">Each spin uses weighted odds. Your reward is chosen when you tap draw.</p>
+        <p class="my-sites-subtitle">Weighted odds. The ticker is flair — your prize is chosen when you tap Draw.</p>
+        ${slotFrame}
         ${poolList}
-        ${busy ? `<div class="rtx-hyper-drawing-hint" aria-live="polite">Drawing reward…</div>` : ""}
+        ${busy ? `<div class="rtx-hyper-drawing-hint" aria-live="polite">Drawing…</div>` : ""}
         <button
           type="button"
           class="btn btn-primary hyperspin-spin-btn"
@@ -1683,7 +1726,7 @@ function HyperSpinPageComponent() {
         </button>
         ${
           HyperSpinPageUI.lastReward && HyperSpinPageUI.lastTone === "success"
-            ? `<div class="rtx-hyper-result-card">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
+            ? `<div class="rtx-hyper-result-card rtx-hyper-result-card--pop">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : HyperSpinPageUI.lastReward
             ? `<div class="hyperspin-feedback ${HyperSpinPageUI.lastTone}">${escapeHtmlAttr(HyperSpinPageUI.lastReward)}</div>`
             : ""
