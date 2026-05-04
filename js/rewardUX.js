@@ -56,21 +56,41 @@ const RewardUX = {
     this.pulse("Session complete — Hyper Spin unlocked", "success");
   },
 
-  /** Banked = dailyActivity.creditsEarned; stillGettable = estimated credits from remaining session views (not in wallet until claimed). */
+  /**
+   * bankedToday = credits recorded today (all sessions).
+   * sessionClaimedCredits = verified claims this run (sessionViews × current per-view); 0 after “Start next session” until you claim again.
+   * remaining* = only while a session is in progress (timer/run active, not completed).
+   */
   getTodayCreditsBreakdown() {
     checkDailyReset();
     const daily = RTXState.user.dailyActivity || {};
-    const confirmed = Math.max(0, Math.floor(Number(daily.creditsEarned) || 0));
+    const bankedToday = Math.max(0, Math.floor(Number(daily.creditsEarned) || 0));
     const per =
       typeof CreditSystem !== "undefined" && CreditSystem && typeof CreditSystem.getCreditsForValidView === "function"
         ? CreditSystem.getCreditsForValidView()
         : Math.round((Number(RTXState.settings.baseCreditsPerView) || 1) * (Number(RTXState.user.multiplier) || 1));
     const vps = Math.max(1, Math.floor(Number(RTXState.settings.viewsPerSession) || 25));
     const sv = Math.max(0, Math.floor(Number(RTXState.user.sessionViews) || 0));
-    const sessionOpen = !RTXState.sessionCompleted && RTXState.sessionActive;
-    const remaining = sessionOpen ? Math.max(0, vps - sv) : 0;
-    const pending = remaining * per;
-    return { confirmed, pending, per, remaining, total: confirmed + pending };
+    const sessionCompleted = Boolean(RTXState.sessionCompleted);
+    const sessionInProgress = !sessionCompleted && Boolean(RTXState.sessionActive);
+    const sessionClaimedCredits = sv * per;
+    const remainingViews = sessionInProgress ? Math.max(0, vps - sv) : 0;
+    const remainingCreditsIfFinish = remainingViews * per;
+    return {
+      bankedToday,
+      sessionClaimedCredits,
+      remainingViews,
+      remainingCreditsIfFinish,
+      per,
+      sv,
+      vps,
+      sessionInProgress,
+      sessionCompleted,
+      confirmed: bankedToday,
+      pending: remainingCreditsIfFinish,
+      remaining: remainingViews,
+      total: bankedToday + remainingCreditsIfFinish
+    };
   },
 
   getDailyTierProgressMeta() {
@@ -204,11 +224,19 @@ const RewardUX = {
           <div class="reward-ux-card reward-ux-card--earnings">
             <div class="reward-ux-card__label">Today’s traffic credits</div>
             <div class="reward-ux-card__hero">
-              <span class="reward-ux-card__big">${credits.confirmed}</span>
+              <span class="reward-ux-card__big">${credits.bankedToday}</span>
               <span class="reward-ux-card__suffix">banked today</span>
             </div>
-            <div class="reward-ux-card__sub">+${credits.pending} more if you finish this run (not in wallet until claimed)</div>
-            <div class="reward-ux-card__hint">${credits.remaining} views still on the board · +${credits.per} per claim</div>
+            <div class="reward-ux-card__sub">This session: <strong>${credits.sessionClaimedCredits}</strong> credits from <strong>${credits.sv}</strong> verified view(s) at +${credits.per} each.</div>
+            <div class="reward-ux-card__hint">${
+              credits.sessionInProgress && credits.remainingViews > 0
+                ? `${credits.remainingViews} claim(s) left this run · up to ${credits.remainingCreditsIfFinish} more credits if you clear them.`
+                : credits.sessionCompleted && credits.sv > 0
+                  ? "This run is finished — start the next session on Hyper Mode when you are ready."
+                  : credits.sessionInProgress && credits.sv === 0
+                    ? `Timer running — first claim adds +${credits.per}; up to ${credits.remainingCreditsIfFinish} credits left in this run.`
+                    : "Open Hyper Mode and start a session to earn session credits again."
+            }</div>
           </div>
           <div class="reward-ux-card reward-ux-card--daily">
             <div class="reward-ux-card__label">Daily reward tier track</div>
@@ -246,21 +274,31 @@ const RewardUX = {
     const sess = this.getSessionUrgency();
     const daily = this.getDailyTierProgressMeta();
     const bankedTitle =
-      "Traffic credits already recorded today (wallet + daily tally). Not unpaid or unconfirmed; they are banked.";
-    const gettableTitle =
-      credits.remaining > 0
-        ? `Up to ${credits.pending} more credits if you claim all ${credits.remaining} remaining view(s) this session at +${credits.per} each. Not in your wallet until you claim.`
-        : "No credits left to earn in this session until you start a new one.";
+      "All traffic credits already recorded today (every session combined). These are real balance changes, not pending confirmation.";
+    const sessionTitle =
+      credits.sessionInProgress && credits.remainingViews > 0
+        ? `${credits.remainingViews} verified claim(s) left this run at +${credits.per} each — up to ${credits.remainingCreditsIfFinish} more session credits if you finish.`
+        : credits.sessionCompleted
+          ? "This session is complete. Start the next session to reset the run counter to zero until you claim again."
+          : credits.sessionInProgress && credits.sv === 0
+            ? `Session active: ${credits.vps} views in this run at +${credits.per} each. "This session" stays 0 until your first claim.`
+            : "Start a session and claim views to add session credits. After Start next session, this line begins at zero again.";
     return `
       <div class="reward-ux-surf-strip reward-ux-surf-strip--compact" role="region" aria-label="Session and earnings">
         <div class="reward-ux-surf-strip__row">
           <div class="reward-ux-surf-strip__earnings" title="${this.esc(bankedTitle)}">
             <span class="reward-ux-surf-strip__label">Today</span>
-            <strong>${credits.confirmed}</strong><span class="reward-ux-surf-strip__muted"> banked</span>
+            <strong>${credits.bankedToday}</strong><span class="reward-ux-surf-strip__muted"> banked</span>
             <span class="reward-ux-surf-strip__dot">·</span>
-            <strong>+${credits.pending}</strong><span class="reward-ux-surf-strip__muted"> if finish run</span>
+            <span class="reward-ux-surf-strip__label">Run</span>
+            <strong>${credits.sessionClaimedCredits}</strong><span class="reward-ux-surf-strip__muted"> this session</span>
+            ${
+              credits.sessionInProgress && credits.remainingViews > 0
+                ? `<span class="reward-ux-surf-strip__dot">·</span><span class="reward-ux-surf-strip__muted">up to <strong>${credits.remainingCreditsIfFinish}</strong> left</span>`
+                : ""
+            }
           </div>
-          <div class="reward-ux-surf-strip__session reward-ux-surf-strip__session--${sess.level}" title="${this.esc(gettableTitle)}">
+          <div class="reward-ux-surf-strip__session reward-ux-surf-strip__session--${sess.level}" title="${this.esc(sessionTitle)}">
             <span class="reward-ux-surf-strip__label">Ses</span>
             <strong>${sess.sv}</strong><span class="reward-ux-surf-strip__muted">/${sess.vps}</span>
             <div class="reward-ux-surf-strip__bar"><div style="width:${sess.pct}%"></div></div>

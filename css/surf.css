@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 4px;
+  gap: 6px;
 }
 
 .app-shell.hyper-mode .surf-viewer-panel {
@@ -21,21 +21,36 @@
   flex-direction: column;
   min-height: 0;
   margin: 0;
-  padding: 2px;
+  padding: 0;
 }
 
 .app-shell.hyper-mode .surf-browser-frame {
   flex: 1;
-  min-height: 280px;
+  min-height: 0;
+  height: auto;
+}
+
+/* Percent heights do not resolve when the frame is a flex item with height:auto — grow the chain with flex. */
+.app-shell.hyper-mode .surf-browser-content {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell.hyper-mode .surf-iframe {
+  flex: 1;
+  min-height: 0;
   height: auto;
 }
 
 .app-shell.hyper-mode .surf-cmd-bar {
-  min-height: 48px;
+  min-height: 52px;
   max-height: none;
   height: auto;
-  padding: 5px 10px;
-  margin-bottom: 4px;
+  padding: 7px 12px;
+  margin: 0 0 6px;
 }
 
 .app-shell.hyper-mode .surf-cmd-logo-icon {
@@ -62,10 +77,18 @@
 }
 
 .app-shell.hyper-mode .surf-info-bar {
-  margin-top: 6px;
+  margin-top: 8px;
   min-height: 0;
-  padding: 6px 8px;
+  padding: 8px 10px;
   flex-shrink: 0;
+}
+
+.app-shell.hyper-mode .surf-viewer-panel.panel {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  padding: 0;
+  box-shadow: none;
 }
 
 .surf-cmd-bar {
@@ -605,7 +628,8 @@
 
   .app-shell.hyper-mode .surf-browser-frame {
     height: auto;
-    min-height: 220px;
+    flex: 1;
+    min-height: 200px;
   }
 
   .surf-info-bar {
