@@ -473,6 +473,41 @@
   padding-bottom: 24px;
 }
 
+.my-sites-page--ad-slots-board {
+  max-width: 1180px;
+}
+
+.my-ads-eight-slots {
+  margin-bottom: 20px;
+}
+
+.my-ads-eight-slots-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.my-ads-eight-slots-desc {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.my-manage-ad-slot-meta {
+  margin-top: 8px;
+}
+
+.public-ad-slot--placeholder-disabled,
+.public-ad-slot--placeholder-disabled:hover,
+.public-ad-slot--placeholder-disabled:focus-visible {
+  opacity: 0.48;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+}
+
 .my-sites-header {
   margin-bottom: 16px;
 }
@@ -690,7 +725,7 @@
 }
 
 .text-ads-display-page {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
   padding-bottom: 24px;
 }
@@ -707,12 +742,7 @@
 }
 
 @media (min-width: 720px) {
-  .public-ad-slots-grid--text {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 900px) {
+  .public-ad-slots-grid--text,
   .public-ad-slots-grid--banner {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }

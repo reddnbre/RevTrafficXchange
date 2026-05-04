@@ -245,7 +245,9 @@ const App = {
   },
 
   isAdSectionView() {
-    return ["my-sites", "my-text-ads", "my-banner-ads"].includes(RTXState.currentView);
+    return ["my-sites", "my-text-ads", "my-banner-ads", "text-ads-display", "banner-ads-display"].includes(
+      RTXState.currentView
+    );
   },
 
   renderLoginScreen() {
@@ -369,6 +371,8 @@ const App = {
             <button type="button" class="nav-dropdown-item" role="menuitem" onclick="App.navigate('my-sites')">My Sites</button>
             <button type="button" class="nav-dropdown-item" role="menuitem" onclick="App.navigate('my-text-ads')">My Text Ads</button>
             <button type="button" class="nav-dropdown-item" role="menuitem" onclick="App.navigate('my-banner-ads')">My Banner Ads</button>
+            <button type="button" class="nav-dropdown-item" role="menuitem" onclick="App.navigate('text-ads-display')">Text ads board (8)</button>
+            <button type="button" class="nav-dropdown-item" role="menuitem" onclick="App.navigate('banner-ads-display')">Banner ads board (8)</button>
           </div>
         </div>
 

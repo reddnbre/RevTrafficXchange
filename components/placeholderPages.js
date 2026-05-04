@@ -659,7 +659,7 @@ function MyTextAdsPageComponent() {
   const showForm = MyTextAdsUI.mode === "add" || MyTextAdsUI.mode === "edit";
 
   return `
-    <section class="my-sites-page">
+    <section class="my-sites-page my-sites-page--ad-slots-board">
       <header class="my-sites-header">
         <h1 class="my-sites-title">My Text Ads</h1>
         <p class="my-sites-subtitle">Promote your offers with text ads.</p>
@@ -669,6 +669,16 @@ function MyTextAdsPageComponent() {
           <span class="my-sites-plan-pill">Available Credits: ${Math.max(0, Math.floor(Number(RTXState.user.credits) || 0))}</span>
         </div>
       </header>
+
+      <section class="my-ads-eight-slots panel" aria-labelledby="my-text-eight-slots-title">
+        <h2 id="my-text-eight-slots-title" class="my-ads-eight-slots-title">Your 8 public board slots</h2>
+        <p class="my-ads-eight-slots-desc">
+          This grid is what the <strong>Text Ads</strong> public page shows. Empty slots say “Put your text here”; click one to add an ad if you still have room.
+        </p>
+        <div class="public-ad-slots-grid public-ad-slots-grid--text">
+          ${renderManageTextAdEightSlotsHtml(atLimit, showForm)}
+        </div>
+      </section>
 
       ${
         MyTextAdsUI.lastError
@@ -829,24 +839,16 @@ const TextAdsDisplayUI = {
 const PUBLIC_TEXT_AD_DISPLAY_SLOTS = 8;
 const PUBLIC_BANNER_AD_DISPLAY_SLOTS = 8;
 
-function TextAdsDisplayPageComponent() {
+function renderPublicTextAdEightSlotsHtml() {
   const ads = TextAdsDisplayUI.getActiveShuffledAds();
   const slots = [];
   for (let i = 0; i < PUBLIC_TEXT_AD_DISPLAY_SLOTS; i += 1) {
     slots.push(ads[i] || null);
   }
-
-  return `
-    <section class="text-ads-display-page">
-      <header class="my-sites-header">
-        <h1 class="my-sites-title">Text Ads</h1>
-        <p class="my-sites-subtitle">Discover opportunities from our members. Empty slots open My Text Ads.</p>
-      </header>
-      <div class="public-ad-slots-grid public-ad-slots-grid--text">
-        ${slots
-          .map((ad, idx) =>
-            ad
-              ? `
+  return slots
+    .map((ad, idx) =>
+      ad
+        ? `
           <article class="panel text-ad-card public-ad-slot public-ad-slot--filled">
             <h3 class="text-ad-title">${escapeHtmlAttr(ad.title)}</h3>
             <p class="text-ad-desc">${escapeHtmlAttr(ad.description || "No description provided.")}</p>
@@ -859,7 +861,7 @@ function TextAdsDisplayPageComponent() {
             </button>
           </article>
         `
-              : `
+        : `
           <button
             type="button"
             class="panel public-ad-slot public-ad-slot--placeholder public-ad-slot--text-placeholder"
@@ -869,8 +871,54 @@ function TextAdsDisplayPageComponent() {
             <span class="public-ad-slot-placeholder-text">Put your text here</span>
           </button>
         `
-          )
-          .join("")}
+    )
+    .join("");
+}
+
+function renderManageTextAdEightSlotsHtml(atLimit, showForm) {
+  const list = RTXState.user.memberCampaigns.textAds || [];
+  const slots = [];
+  for (let i = 0; i < PUBLIC_TEXT_AD_DISPLAY_SLOTS; i += 1) {
+    slots.push(list[i] || null);
+  }
+  const canPlaceholderAdd = !atLimit && !showForm;
+  return slots
+    .map((ad, idx) =>
+      ad
+        ? `
+          <article class="panel text-ad-card public-ad-slot public-ad-slot--filled my-manage-ad-slot">
+            <h3 class="text-ad-title">${escapeHtmlAttr(ad.title)}</h3>
+            <p class="text-ad-desc">${escapeHtmlAttr(ad.description || "No description provided.")}</p>
+            <div class="my-manage-ad-slot-meta">
+              <span class="my-sites-badge ${ad.active ? "on" : "off"}">${ad.active ? "Active" : "Paused"}</span>
+            </div>
+            <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="MyTextAdsUI.startEdit('${escapeJsSingleQuoted(ad.id)}')">Edit</button>
+          </article>
+        `
+        : `
+          <button
+            type="button"
+            class="panel public-ad-slot public-ad-slot--placeholder public-ad-slot--text-placeholder${canPlaceholderAdd ? "" : " public-ad-slot--placeholder-disabled"}"
+            aria-label="Slot ${idx + 1} empty. Add a text ad."
+            ${canPlaceholderAdd ? `onclick="MyTextAdsUI.showAdd()"` : "disabled"}
+            title="${canPlaceholderAdd ? "Add a text ad" : atLimit ? "Ad slot limit reached" : "Finish or cancel the form above"}"
+          >
+            <span class="public-ad-slot-placeholder-text">Put your text here</span>
+          </button>
+        `
+    )
+    .join("");
+}
+
+function TextAdsDisplayPageComponent() {
+  return `
+    <section class="text-ads-display-page">
+      <header class="my-sites-header">
+        <h1 class="my-sites-title">Text Ads</h1>
+        <p class="my-sites-subtitle">Eight slots on the public board. Empty slots open My Text Ads.</p>
+      </header>
+      <div class="public-ad-slots-grid public-ad-slots-grid--text">
+        ${renderPublicTextAdEightSlotsHtml()}
       </div>
     </section>
   `;
@@ -914,24 +962,16 @@ const BannerAdsDisplayUI = {
   }
 };
 
-function BannerAdsDisplayPageComponent() {
+function renderPublicBannerEightSlotsHtml() {
   const banners = BannerAdsDisplayUI.getActiveShuffledBanners();
   const slots = [];
   for (let i = 0; i < PUBLIC_BANNER_AD_DISPLAY_SLOTS; i += 1) {
     slots.push(banners[i] || null);
   }
-
-  return `
-    <section class="text-ads-display-page banner-ads-display-page">
-      <header class="my-sites-header">
-        <h1 class="my-sites-title">Banner Ads</h1>
-        <p class="my-sites-subtitle">Explore promotions from our members. Empty slots open My Banner Ads.</p>
-      </header>
-      <div class="public-ad-slots-grid public-ad-slots-grid--banner">
-        ${slots
-          .map((ad, idx) =>
-            ad
-              ? `
+  return slots
+    .map((ad, idx) =>
+      ad
+        ? `
           <article class="panel banner-ad-card public-ad-slot public-ad-slot--filled">
             <button
               type="button"
@@ -949,7 +989,7 @@ function BannerAdsDisplayPageComponent() {
             </button>
           </article>
         `
-              : `
+        : `
           <button
             type="button"
             class="panel public-ad-slot public-ad-slot--placeholder public-ad-slot--banner-placeholder"
@@ -959,8 +999,59 @@ function BannerAdsDisplayPageComponent() {
             <span class="public-ad-slot-placeholder-text">Put banner here</span>
           </button>
         `
-          )
-          .join("")}
+    )
+    .join("");
+}
+
+function renderManageBannerEightSlotsHtml(atLimit, showForm) {
+  const list = RTXState.user.memberCampaigns.bannerAds || [];
+  const slots = [];
+  for (let i = 0; i < PUBLIC_BANNER_AD_DISPLAY_SLOTS; i += 1) {
+    slots.push(list[i] || null);
+  }
+  const canPlaceholderAdd = !atLimit && !showForm;
+  return slots
+    .map((ad, idx) =>
+      ad
+        ? `
+          <article class="panel banner-ad-card public-ad-slot public-ad-slot--filled my-manage-ad-slot">
+            <button
+              type="button"
+              class="banner-ad-click-area"
+              onclick="MyBannerAdsUI.startEdit('${escapeJsSingleQuoted(ad.id)}')"
+            >
+              <img class="banner-ad-image" src="${escapeHtmlAttr(ad.imageUrl)}" alt="Member banner ad" loading="lazy" />
+            </button>
+            <div class="my-manage-ad-slot-meta">
+              <span class="my-sites-badge ${ad.active ? "on" : "off"}">${ad.active ? "Active" : "Paused"}</span>
+            </div>
+            <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="MyBannerAdsUI.startEdit('${escapeJsSingleQuoted(ad.id)}')">Edit</button>
+          </article>
+        `
+        : `
+          <button
+            type="button"
+            class="panel public-ad-slot public-ad-slot--placeholder public-ad-slot--banner-placeholder${canPlaceholderAdd ? "" : " public-ad-slot--placeholder-disabled"}"
+            aria-label="Slot ${idx + 1} empty. Add a banner ad."
+            ${canPlaceholderAdd ? `onclick="MyBannerAdsUI.showAdd()"` : "disabled"}
+            title="${canPlaceholderAdd ? "Add a banner ad" : atLimit ? "Banner slot limit reached" : "Finish or cancel the form above"}"
+          >
+            <span class="public-ad-slot-placeholder-text">Put banner here</span>
+          </button>
+        `
+    )
+    .join("");
+}
+
+function BannerAdsDisplayPageComponent() {
+  return `
+    <section class="text-ads-display-page banner-ads-display-page">
+      <header class="my-sites-header">
+        <h1 class="my-sites-title">Banner Ads</h1>
+        <p class="my-sites-subtitle">Eight slots on the public board. Empty slots open My Banner Ads.</p>
+      </header>
+      <div class="public-ad-slots-grid public-ad-slots-grid--banner">
+        ${renderPublicBannerEightSlotsHtml()}
       </div>
     </section>
   `;
@@ -1158,7 +1249,7 @@ function MyBannerAdsPageComponent() {
   const showForm = MyBannerAdsUI.mode === "add" || MyBannerAdsUI.mode === "edit";
 
   return `
-    <section class="my-sites-page">
+    <section class="my-sites-page my-sites-page--ad-slots-board">
       <header class="my-sites-header">
         <h1 class="my-sites-title">My Banner Ads</h1>
         <p class="my-sites-subtitle">Promote your offers with banner ads.</p>
@@ -1168,6 +1259,16 @@ function MyBannerAdsPageComponent() {
           <span class="my-sites-plan-pill">Available Credits: ${Math.max(0, Math.floor(Number(RTXState.user.credits) || 0))}</span>
         </div>
       </header>
+
+      <section class="my-ads-eight-slots panel" aria-labelledby="my-banner-eight-slots-title">
+        <h2 id="my-banner-eight-slots-title" class="my-ads-eight-slots-title">Your 8 public board slots</h2>
+        <p class="my-ads-eight-slots-desc">
+          This grid is what the <strong>Banner Ads</strong> public page shows. Empty slots say “Put banner here”; click one to add a banner if you still have room.
+        </p>
+        <div class="public-ad-slots-grid public-ad-slots-grid--banner">
+          ${renderManageBannerEightSlotsHtml(atLimit, showForm)}
+        </div>
+      </section>
 
       ${
         MyBannerAdsUI.lastError
