@@ -228,6 +228,7 @@ const RewardUX = {
               <span class="reward-ux-card__suffix">banked today</span>
             </div>
             <div class="reward-ux-card__sub">This session: <strong>${credits.sessionClaimedCredits}</strong> credits from <strong>${credits.sv}</strong> verified view(s) at +${credits.per} each.</div>
+            <div class="reward-ux-card__hint reward-ux-card__hint--muted">Wallet credits (top bar / Hyper Mode) are your live balance. “Today banked” is the same credits summed for daily stats and tier — not a second balance waiting to post.</div>
             <div class="reward-ux-card__hint">${
               credits.sessionInProgress && credits.remainingViews > 0
                 ? `${credits.remainingViews} claim(s) left this run · up to ${credits.remainingCreditsIfFinish} more credits if you clear them.`

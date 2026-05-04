@@ -34,6 +34,13 @@ const GameModal = {
 
   spin() {
     if (this.animating) return;
+    const balance = Math.max(0, Math.floor(Number(RTXState.user && RTXState.user.hyperSpins) || 0));
+    if (balance <= 0) return;
+    RTXState.user.hyperSpins = balance - 1;
+    if (typeof RTXUserPersist !== "undefined" && RTXUserPersist.save) {
+      RTXUserPersist.save();
+    }
+
     const picked = HyperSpin.pickWinningSegment();
     const segments = Array.isArray(HyperSpin.rewards) ? HyperSpin.rewards : [];
     const n = Math.max(1, segments.length);

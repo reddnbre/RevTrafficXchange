@@ -29,6 +29,13 @@ function SurfPageComponent() {
   const boostTimeLeft = typeof getBoostTimeLeftText === "function" ? getBoostTimeLeftText() : "";
   const boostLabel = boostPct > 0 ? `+${boostPct}%${boostTimeLeft ? ` (${boostTimeLeft})` : ""}` : "+0%";
 
+  const creditsWalletTitle =
+    'Wallet: traffic credits you already own and can spend. "Today banked" above counts the same credits toward your daily stats and tier. There is no separate uncredited balance in this demo.';
+  const escAttr =
+    typeof escapeHtmlAttr === "function"
+      ? escapeHtmlAttr(creditsWalletTitle)
+      : String(creditsWalletTitle).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
   const primaryAction = sessionLocked
     ? `<button class="btn btn-primary surf-claim-btn" onclick="SurfEngine.startNextSession()">Start Next Session</button>`
     : SurfEngine.isRunning
@@ -48,7 +55,7 @@ function SurfPageComponent() {
             <img class="surf-cmd-logo-icon" src="assets/images/logos/rx-icon.png" alt="" />
             <img class="surf-cmd-logo-wordmark" src="assets/images/logos/revtx-wordmark.png" alt="" />
           </div>
-          <span class="surf-cmd-pill" id="surf-credits-pill">Credits: ${u.credits}</span>
+          <span class="surf-cmd-pill" id="surf-credits-pill" title="${escAttr}">Credits: ${u.credits}</span>
           <span id="surf-multiplier-pill" class="surf-cmd-pill ${claimMultiplier > 1 ? "surf-cmd-pill-multiplier-on" : "surf-cmd-pill-multiplier-off"}">Payout Multiplier: x${claimMultiplier.toFixed(1)}</span>
           <span class="surf-cmd-pill" id="surf-per-view-pill">Per View: +${creditsPerView}</span>
           <span id="surf-activity-pill" class="surf-cmd-pill ${boostPct > 0 ? "surf-cmd-pill-boost-on" : "surf-cmd-pill-boost-off"}">Activity Boost: ${boostLabel}</span>

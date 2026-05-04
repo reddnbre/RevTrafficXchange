@@ -118,6 +118,13 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.reward-ux-card__hint--muted {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .reward-ux-tier-pill {
   display: inline-block;
   padding: 4px 10px;
