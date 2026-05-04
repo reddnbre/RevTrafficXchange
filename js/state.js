@@ -1157,7 +1157,7 @@ function buyTrafficBoost() {
 function getCampaignWeight(campaign) {
   checkTrafficBoostExpiry();
   if (campaign && campaign.source === "admin") return 3;
-  if (campaign && campaign.source === "member") {
+  if (campaign && String(campaign.source || "").startsWith("member")) {
     const base = RTXState.user.membershipLevel === "upgraded" ? 2 : 1;
     const tb = RTXState.user.activeTrafficBoost;
     if (tb && tb.active && Date.now() <= tb.expiresAt) {
@@ -1181,6 +1181,23 @@ function buildWeightedQueue(campaigns) {
   return weighted;
 }
 
+function buildMemberAdLandingDataUrl(kind, ad) {
+  const target = getSafeSurfUrl(ad && ad.targetUrl);
+  if (!target) return "";
+  const esc = (s) =>
+    String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  const isBanner = kind === "banner";
+  const title = isBanner ? "Member Banner Ad" : String(ad && ad.title ? ad.title : "Member Text Ad");
+  const desc = isBanner ? "Discover this sponsor after your timer ends." : String(ad && ad.description ? ad.description : "");
+  const imageUrl = isBanner ? esc(String(ad && ad.imageUrl ? ad.imageUrl : "")) : "";
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>body{font-family:Arial,sans-serif;background:#05080f;color:#e5e7eb;margin:0;min-height:100vh;display:grid;place-items:center}.card{width:min(900px,94vw);border:1px solid #1f2937;background:#0b1220;border-radius:14px;padding:22px}.k{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}.h{font-size:30px;color:#22d3ee;margin:8px 0}.d{color:#cbd5e1;margin-bottom:14px}.img{display:block;max-width:100%;max-height:260px;object-fit:contain;border:1px solid #1f2937;border-radius:10px;background:#020617;padding:6px;margin-bottom:12px}.cta{display:inline-block;padding:10px 14px;background:#f97316;color:#fff;text-decoration:none;border-radius:10px;font-weight:700}</style></head><body><main class="card"><div class="k">${isBanner ? "Member Banner" : "Member Text Ad"}</div><h1 class="h">${esc(title)}</h1><p class="d">${esc(desc)}</p>${isBanner && imageUrl ? `<img class="img" src="${imageUrl}" alt="member banner">` : ""}<a class="cta" href="${esc(target)}" target="_blank" rel="noopener noreferrer">Open Offer</a></main></body></html>`;
+  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+}
+
 /** Combined active queue from admin surf ads + member sites, shuffled. */
 function getSurfCampaignQueue() {
   const adminAds = Array.isArray(RTXState.admin.surfAds) ? RTXState.admin.surfAds : [];
@@ -1189,6 +1206,18 @@ function getSurfCampaignQueue() {
     RTXState.user.memberCampaigns &&
     Array.isArray(RTXState.user.memberCampaigns.surfUrls)
       ? RTXState.user.memberCampaigns.surfUrls
+      : [];
+  const memberTextAds =
+    RTXState.user &&
+    RTXState.user.memberCampaigns &&
+    Array.isArray(RTXState.user.memberCampaigns.textAds)
+      ? RTXState.user.memberCampaigns.textAds
+      : [];
+  const memberBannerAds =
+    RTXState.user &&
+    RTXState.user.memberCampaigns &&
+    Array.isArray(RTXState.user.memberCampaigns.bannerAds)
+      ? RTXState.user.memberCampaigns.bannerAds
       : [];
   const currentUserId = getCurrentUserId();
 
@@ -1216,13 +1245,43 @@ function getSurfCampaignQueue() {
       active: Boolean(site && site.active),
       views: Math.max(0, Number(site && site.views) || 0),
       maxViews: allocatedViews || null,
-      timerSec: 20,
+      timerSec: 8,
       credits: 1,
       source: "member"
     };
   });
 
-  const combined = [...normalizedAdmin, ...normalizedMember];
+  const normalizedTextAds = memberTextAds.map((ad) => {
+    const allocatedViews = Math.max(0, Number(ad && ad.allocatedViews) || 0);
+    return {
+      id: String(ad && ad.id ? ad.id : ""),
+      ownerId: String(ad && ad.ownerId ? ad.ownerId : ""),
+      url: buildMemberAdLandingDataUrl("text", ad),
+      active: Boolean(ad && ad.active),
+      views: Math.max(0, Number(ad && ad.views) || 0),
+      maxViews: allocatedViews || null,
+      timerSec: 12,
+      credits: 1,
+      source: "member-text"
+    };
+  });
+
+  const normalizedBannerAds = memberBannerAds.map((ad) => {
+    const allocatedViews = Math.max(0, Number(ad && ad.allocatedViews) || 0);
+    return {
+      id: String(ad && ad.id ? ad.id : ""),
+      ownerId: String(ad && ad.ownerId ? ad.ownerId : ""),
+      url: buildMemberAdLandingDataUrl("banner", ad),
+      active: Boolean(ad && ad.active),
+      views: Math.max(0, Number(ad && ad.impressions) || 0),
+      maxViews: allocatedViews || null,
+      timerSec: 8,
+      credits: 1,
+      source: "member-banner"
+    };
+  });
+
+  const combined = [...normalizedAdmin, ...normalizedMember, ...normalizedTextAds, ...normalizedBannerAds];
   const eligible = combined.filter((ad) => {
     if (ad.source === "member" && ad.ownerId && ad.ownerId === currentUserId) return false;
     if (!ad.url) return false;
@@ -1236,7 +1295,16 @@ function getSurfCampaignQueue() {
 
   const base = eligible.map((ad) => ({
     id: ad.id,
-    title: `${surfAdTitleFromUrl(ad.url)} — ${ad.source === "admin" ? "Admin Ad" : "Member Site"}`,
+    ownerId: ad.ownerId || "",
+    title: `${surfAdTitleFromUrl(ad.url)} — ${
+      ad.source === "admin"
+        ? "Admin Ad"
+        : ad.source === "member-text"
+          ? "Member Text Ad"
+          : ad.source === "member-banner"
+            ? "Member Banner Ad"
+            : "Member Site"
+    }`,
     url: ad.url,
     timerSec: Math.max(1, Number(ad.timerSec) || 20),
     credits: Math.max(0, Number(ad.credits) || 1),
@@ -1271,6 +1339,30 @@ function incrementSurfCampaignView(campaign) {
         views: Math.max(0, Number(site.views) || 0) + 1
       };
     });
+    RTXUserPersist.save();
+    return;
+  }
+
+  if (campaign.source === "member-text") {
+    normalizeMemberCampaigns();
+    RTXState.user.memberCampaigns.textAds = RTXState.user.memberCampaigns.textAds.map((ad) =>
+      String(ad.id) === String(campaign.id)
+        ? { ...ad, views: Math.max(0, Number(ad.views) || 0) + 1 }
+        : ad
+    );
+    handleTextAdView(campaign.id);
+    RTXUserPersist.save();
+    return;
+  }
+
+  if (campaign.source === "member-banner") {
+    normalizeMemberCampaigns();
+    RTXState.user.memberCampaigns.bannerAds = RTXState.user.memberCampaigns.bannerAds.map((ad) =>
+      String(ad.id) === String(campaign.id)
+        ? { ...ad, impressions: Math.max(0, Number(ad.impressions) || 0) + 1 }
+        : ad
+    );
+    handleBannerAdView(campaign.id);
     RTXUserPersist.save();
   }
 }
