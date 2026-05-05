@@ -72,7 +72,7 @@ const App = {
     }
   },
 
-  submitFakeLogin() {
+  async submitFakeLogin() {
     const input = document.getElementById("fake-login-email");
     const userId = this.sanitizeFakeLoginEmail(input ? input.value : "");
     const passEl = document.getElementById("fake-login-password");
@@ -129,6 +129,25 @@ const App = {
       applyPendingReferralAttribution();
     }
     RTXUserPersist.save();
+    try {
+      if (typeof RTXBackendClient !== "undefined" && RTXBackendClient && RTXBackendClient.isEnabled()) {
+        const remote = await RTXBackendClient.login({
+          email: userId,
+          password,
+          username: String(RTXState.user && RTXState.user.username ? RTXState.user.username : "")
+        });
+        if (remote && remote.state && typeof remote.state === "object") {
+          Object.assign(RTXState.user, remote.state);
+          if (typeof normalizeUserProfile === "function") {
+            normalizeUserProfile();
+          }
+          RTXUserPersist.save();
+        }
+        await RTXBackendClient.saveState(RTXState.user);
+      }
+    } catch (e) {
+      console.warn("Backend login sync skipped:", e);
+    }
     this.ensureLoginCaptcha();
     RTXState.currentView = "dashboard";
     this.render();
@@ -136,7 +155,17 @@ const App = {
     this.render();
   },
 
-  logout() {
+  async logout() {
+    const stateSnapshot =
+      RTXState && RTXState.user && typeof RTXState.user === "object" ? JSON.parse(JSON.stringify(RTXState.user)) : {};
+    try {
+      if (typeof RTXBackendClient !== "undefined" && RTXBackendClient && RTXBackendClient.isEnabled()) {
+        await RTXBackendClient.saveState(stateSnapshot);
+        await RTXBackendClient.logout();
+      }
+    } catch (e) {
+      console.warn("Backend logout sync skipped:", e);
+    }
     try {
       if (typeof RTXUserPersist !== "undefined" && RTXUserPersist.save) {
         RTXUserPersist.save();

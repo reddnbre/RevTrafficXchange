@@ -1,0 +1,8 @@
+name = "revtrafficxchange-api"
+main = "src/worker.js"
+compatibility_date = "2026-05-05"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "revtrafficxchange"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
