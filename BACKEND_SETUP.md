@@ -56,9 +56,55 @@ If `baseUrl` is missing, frontend stays in local-only mode.
 - `POST /api/auth/logout`
 - `GET /api/me` (Bearer token)
 - `PUT /api/me/state` with `{ state }` (Bearer token)
+- `POST /api/payments/checkout` with `{ productKey }` (Bearer token)
+- `POST /api/payments/webhook/stripe` (Stripe webhook endpoint)
 
 ## Notes
 
 - Password is accepted for compatibility but not validated yet (demo auth model).
 - User app state is saved as JSON in `users.state_json`.
-- Next step is to move server-trust logic (credits/session claim validation) into backend endpoints.
+- Stripe checkout fulfillment now writes to DB and updates user state (`credits`, `membershipLevel`, `isPaid`, `qualifiedSpend`) from webhook events.
+
+## Stripe setup
+
+1) Set Worker secrets:
+
+```bash
+wrangler secret put STRIPE_SECRET_KEY
+wrangler secret put STRIPE_WEBHOOK_SECRET
+```
+
+2) Add Stripe Price IDs as vars in `backend/wrangler.toml`:
+
+- `STRIPE_PRICE_MEMBERSHIP_PRO_MONTHLY`
+- `STRIPE_PRICE_REVCOINS_50`
+- `STRIPE_PRICE_REVCOINS_120`
+- `STRIPE_PRICE_REVCOINS_260`
+- `STRIPE_PRICE_REVCOINS_700`
+- `STRIPE_PRICE_CREDITS_1000_PACK`
+
+3) In Stripe Dashboard, create webhook endpoint:
+
+- URL: `https://<your-worker-domain>/api/payments/webhook/stripe`
+- Event: `checkout.session.completed`
+
+4) In frontend, call:
+
+```js
+const { checkoutUrl } = await RTXBackendClient.createCheckout("credits_1000_pack");
+window.location.href = checkoutUrl;
+```
+
+or
+
+```js
+const { checkoutUrl } = await RTXBackendClient.createCheckout("revcoins_260");
+window.location.href = checkoutUrl;
+```
+
+or
+
+```js
+const { checkoutUrl } = await RTXBackendClient.createCheckout("membership_pro_monthly");
+window.location.href = checkoutUrl;
+```

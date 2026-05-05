@@ -20,6 +20,51 @@ function withCors(req, res) {
   return new Response(res.body, { status: res.status, headers });
 }
 
+function parseStripeSignature(header) {
+  const raw = String(header || "");
+  const parts = raw.split(",").map((p) => p.trim());
+  let ts = "";
+  let v1 = "";
+  for (const part of parts) {
+    const idx = part.indexOf("=");
+    if (idx < 0) continue;
+    const k = part.slice(0, idx);
+    const v = part.slice(idx + 1);
+    if (k === "t") ts = v;
+    if (k === "v1") v1 = v;
+  }
+  return { ts, v1 };
+}
+
+function toHex(buffer) {
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function hmacSha256Hex(secret, payload) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return toHex(sig);
+}
+
+function constantTimeEqualHex(a, b) {
+  const x = String(a || "");
+  const y = String(b || "");
+  if (x.length !== y.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < x.length; i += 1) {
+    mismatch |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 function normalizeEmail(raw) {
   return String(raw || "").trim().toLowerCase();
 }
@@ -59,6 +104,45 @@ function randomId(prefix) {
     .join("");
   return `${prefix}_${hex}`;
 }
+
+const PRODUCT_CATALOG = {
+  membership_pro_monthly: {
+    mode: "subscription",
+    type: "membership",
+    membershipTier: "upgraded",
+    priceEnvKey: "STRIPE_PRICE_MEMBERSHIP_PRO_MONTHLY"
+  },
+  revcoins_50: {
+    mode: "payment",
+    type: "credits",
+    creditsAmount: 50,
+    priceEnvKey: "STRIPE_PRICE_REVCOINS_50"
+  },
+  revcoins_120: {
+    mode: "payment",
+    type: "credits",
+    creditsAmount: 120,
+    priceEnvKey: "STRIPE_PRICE_REVCOINS_120"
+  },
+  revcoins_260: {
+    mode: "payment",
+    type: "credits",
+    creditsAmount: 260,
+    priceEnvKey: "STRIPE_PRICE_REVCOINS_260"
+  },
+  revcoins_700: {
+    mode: "payment",
+    type: "credits",
+    creditsAmount: 700,
+    priceEnvKey: "STRIPE_PRICE_REVCOINS_700"
+  },
+  credits_1000_pack: {
+    mode: "payment",
+    type: "credits",
+    creditsAmount: 1000,
+    priceEnvKey: "STRIPE_PRICE_CREDITS_1000_PACK"
+  }
+};
 
 async function getSessionUser(env, token) {
   if (!token) return null;
@@ -148,6 +232,174 @@ async function handleLogout(req, env) {
   return json({ ok: true });
 }
 
+async function fetchStripeJson(env, path, paramsObj) {
+  const body = new URLSearchParams(paramsObj || {}).toString();
+  const res = await fetch(`https://api.stripe.com/v1${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data && data.error && data.error.message ? data.error.message : `Stripe error (${res.status})`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function handleCreateCheckout(req, env) {
+  const token = tokenFromAuth(req);
+  const user = await getSessionUser(env, token);
+  if (!user) return json({ error: "Unauthorized" }, { status: 401 });
+  if (!env.STRIPE_SECRET_KEY) return json({ error: "Stripe is not configured" }, { status: 500 });
+
+  const body = await parseJson(req);
+  const productKey = String(body.productKey || "");
+  const product = PRODUCT_CATALOG[productKey];
+  if (!product) return json({ error: "Unknown productKey" }, { status: 400 });
+
+  const priceId = String(env[product.priceEnvKey] || "").trim();
+  if (!priceId) return json({ error: `Missing env: ${product.priceEnvKey}` }, { status: 500 });
+
+  const baseUrl = String(env.APP_BASE_URL || "").trim() || "https://revtrafficxchange.com";
+  const successUrl = `${baseUrl}/?billing=success`;
+  const cancelUrl = `${baseUrl}/?billing=cancelled`;
+
+  const metadata = {
+    user_id: String(user.id),
+    product_key: productKey,
+    purchase_type: product.type
+  };
+  if (product.creditsAmount) metadata.credits_amount = String(product.creditsAmount);
+  if (product.membershipTier) metadata.membership_tier = String(product.membershipTier);
+
+  const params = {
+    mode: product.mode,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    "line_items[0][price]": priceId,
+    "line_items[0][quantity]": "1",
+    client_reference_id: String(user.id),
+    "metadata[user_id]": metadata.user_id,
+    "metadata[product_key]": metadata.product_key,
+    "metadata[purchase_type]": metadata.purchase_type
+  };
+  if (metadata.credits_amount) params["metadata[credits_amount]"] = metadata.credits_amount;
+  if (metadata.membership_tier) params["metadata[membership_tier]"] = metadata.membership_tier;
+
+  const session = await fetchStripeJson(env, "/checkout/sessions", params);
+  const now = nowIso();
+  await env.DB.prepare(
+    `INSERT INTO purchases (
+      id, user_id, stripe_checkout_session_id, stripe_payment_intent_id, product_key, amount_cents, currency, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+    ON CONFLICT(stripe_checkout_session_id) DO UPDATE SET
+      stripe_payment_intent_id = excluded.stripe_payment_intent_id,
+      updated_at = excluded.updated_at`
+  )
+    .bind(
+      randomId("purchase"),
+      user.id,
+      String(session.id || ""),
+      String(session.payment_intent || ""),
+      productKey,
+      Number(session.amount_total || 0),
+      String(session.currency || "usd"),
+      now,
+      now
+    )
+    .run();
+
+  return json({ checkoutUrl: session.url, sessionId: session.id });
+}
+
+async function applyFulfillmentForCheckoutSession(env, checkoutSession) {
+  const sessionId = String(checkoutSession && checkoutSession.id ? checkoutSession.id : "");
+  if (!sessionId) return;
+  const metadata = checkoutSession && checkoutSession.metadata ? checkoutSession.metadata : {};
+  const userId = String(metadata.user_id || checkoutSession.client_reference_id || "");
+  if (!userId) return;
+  const productKey = String(metadata.product_key || "");
+  const purchaseType = String(metadata.purchase_type || "");
+  const membershipTier = String(metadata.membership_tier || "");
+  const creditsAmount = Math.max(0, Number(metadata.credits_amount || 0));
+  const amountCents = Math.max(0, Number(checkoutSession.amount_total || 0));
+  const currency = String(checkoutSession.currency || "usd");
+  const now = nowIso();
+
+  const user = await env.DB.prepare("SELECT id, state_json FROM users WHERE id = ?").bind(userId).first();
+  if (!user) return;
+
+  let state = {};
+  try {
+    state = user.state_json ? JSON.parse(user.state_json) : {};
+  } catch (e) {
+    state = {};
+  }
+
+  if (purchaseType === "credits" && creditsAmount > 0) {
+    state.credits = Math.max(0, Number(state.credits) || 0) + creditsAmount;
+  }
+  if (purchaseType === "membership" && membershipTier) {
+    state.membershipLevel = membershipTier;
+    state.isPaid = membershipTier !== "free";
+  }
+  state.qualifiedSpend = Math.max(0, Number(state.qualifiedSpend) || 0) + amountCents / 100;
+
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET state_json = ?, updated_at = ? WHERE id = ?").bind(JSON.stringify(state), now, userId),
+    env.DB.prepare(
+      `UPDATE purchases
+       SET status = 'fulfilled', fulfilled_at = ?, updated_at = ?, amount_cents = ?, currency = ?, product_key = COALESCE(NULLIF(product_key, ''), ?)
+       WHERE stripe_checkout_session_id = ?`
+    ).bind(now, now, amountCents, currency, productKey, sessionId)
+  ]);
+}
+
+async function handleStripeWebhook(req, env) {
+  if (!env.STRIPE_WEBHOOK_SECRET) return json({ error: "Webhook secret missing" }, { status: 500 });
+
+  const signature = req.headers.get("Stripe-Signature");
+  const { ts, v1 } = parseStripeSignature(signature);
+  if (!ts || !v1) return json({ error: "Invalid signature header" }, { status: 400 });
+
+  const rawBody = await req.text();
+  const signedPayload = `${ts}.${rawBody}`;
+  const expected = await hmacSha256Hex(env.STRIPE_WEBHOOK_SECRET, signedPayload);
+  if (!constantTimeEqualHex(expected, v1)) {
+    return json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  let event;
+  try {
+    event = JSON.parse(rawBody);
+  } catch (e) {
+    return json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const eventId = String(event && event.id ? event.id : "");
+  const eventType = String(event && event.type ? event.type : "");
+  if (!eventId || !eventType) return json({ error: "Invalid event payload" }, { status: 400 });
+
+  const already = await env.DB.prepare("SELECT event_id FROM stripe_events WHERE event_id = ?").bind(eventId).first();
+  if (already) return json({ ok: true, duplicate: true });
+
+  if (eventType === "checkout.session.completed") {
+    const checkoutSession = event && event.data && event.data.object ? event.data.object : null;
+    if (checkoutSession) {
+      await applyFulfillmentForCheckoutSession(env, checkoutSession);
+    }
+  }
+
+  await env.DB.prepare("INSERT INTO stripe_events (event_id, event_type, processed_at) VALUES (?, ?, ?)")
+    .bind(eventId, eventType, nowIso())
+    .run();
+  return json({ ok: true });
+}
+
 export default {
   async fetch(req, env) {
     if (req.method === "OPTIONS") {
@@ -175,6 +427,14 @@ export default {
     }
     if (req.method === "PUT" && url.pathname === "/api/me/state") {
       res = await handleStateSave(req, env);
+      return withCors(req, res);
+    }
+    if (req.method === "POST" && url.pathname === "/api/payments/checkout") {
+      res = await handleCreateCheckout(req, env);
+      return withCors(req, res);
+    }
+    if (req.method === "POST" && url.pathname === "/api/payments/webhook/stripe") {
+      res = await handleStripeWebhook(req, env);
       return withCors(req, res);
     }
 

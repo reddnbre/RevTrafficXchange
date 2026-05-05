@@ -1311,6 +1311,8 @@ function MyBannerAdsPageComponent() {
 
 const RevCoinStoreUI = {
   modalVisible: false,
+  modalTitle: "Payments coming soon",
+  modalMessage: "Purchase flow is not enabled yet. Stripe integration is still being finalized.",
   testFeedback: "",
   planFeedback: "",
 
@@ -1321,8 +1323,16 @@ const RevCoinStoreUI = {
     p50: { price: 50, coins: 700 }
   },
 
-  openPurchasePlaceholder() {
-    console.log("Purchase flow coming soon");
+  PACK_PRODUCT_KEY_BY_ID: {
+    p5: "revcoins_50",
+    p10: "revcoins_120",
+    p20: "revcoins_260",
+    p50: "revcoins_700"
+  },
+
+  openPurchasePlaceholder(title, message) {
+    this.modalTitle = String(title || "Payments coming soon");
+    this.modalMessage = String(message || "Purchase flow is not enabled yet. Stripe integration is still being finalized.");
     this.modalVisible = true;
     App.render();
   },
@@ -1330,6 +1340,38 @@ const RevCoinStoreUI = {
   closePurchasePlaceholder() {
     this.modalVisible = false;
     App.render();
+  },
+
+  async startCheckout(productKey, onSuccessMessageSetter) {
+    if (!RTXState.session || !RTXState.session.isAuthenticated) {
+      this.openPurchasePlaceholder("Sign in required", "Please sign in first, then try checkout again.");
+      return;
+    }
+    try {
+      if (typeof RTXBackendClient === "undefined" || !RTXBackendClient || !RTXBackendClient.isEnabled()) {
+        this.openPurchasePlaceholder(
+          "Backend not connected",
+          "Payments are not configured yet. Connect the backend API and Stripe keys first."
+        );
+        return;
+      }
+      if (typeof onSuccessMessageSetter === "function") {
+        onSuccessMessageSetter("Redirecting to secure checkout...");
+      }
+      App.render();
+      const res = await RTXBackendClient.createCheckout(productKey);
+      if (!res || !res.checkoutUrl) {
+        throw new Error("Checkout URL was not returned by the server.");
+      }
+      window.location.href = res.checkoutUrl;
+    } catch (e) {
+      const msg = e && e.message ? e.message : "Unable to start checkout right now.";
+      this.openPurchasePlaceholder("Checkout failed", msg);
+      if (typeof onSuccessMessageSetter === "function") {
+        onSuccessMessageSetter("");
+      }
+      App.render();
+    }
   },
 
   addTestRevCoins(amount) {
@@ -1376,7 +1418,7 @@ const RevCoinStoreUI = {
     App.render();
   },
 
-  onPackBuyClick(packId) {
+  async onPackBuyClick(packId) {
     const pack = this.PACKS_BY_ID[packId];
     if (!pack) {
       this.openPurchasePlaceholder();
@@ -1386,7 +1428,18 @@ const RevCoinStoreUI = {
       this.simulatePackPurchase(pack);
       return;
     }
-    this.openPurchasePlaceholder();
+    const productKey = this.PACK_PRODUCT_KEY_BY_ID[packId];
+    if (!productKey) {
+      this.openPurchasePlaceholder("Catalog error", "This package is not mapped to a backend product yet.");
+      return;
+    }
+    await this.startCheckout(productKey);
+  },
+
+  async onUpgradeBuyClick() {
+    await this.startCheckout("membership_pro_monthly", (msg) => {
+      this.planFeedback = msg;
+    });
   },
 
   renderModal() {
@@ -1394,8 +1447,8 @@ const RevCoinStoreUI = {
     return `
       <div class="loyalty-info-overlay">
         <div class="loyalty-info-card premium-coming-soon-card">
-          <h3>Payments coming soon</h3>
-          <p>Purchase flow is not enabled yet. Stripe/PayPal integration will be added later.</p>
+          <h3>${escapeHtmlAttr(this.modalTitle)}</h3>
+          <p>${escapeHtmlAttr(this.modalMessage)}</p>
           <button class="btn btn-primary" onclick="RevCoinStoreUI.closePurchasePlaceholder()">Got it</button>
         </div>
       </div>
@@ -1444,7 +1497,7 @@ function RevCoinStorePageComponent() {
       </div>
       ${
         isAdmin
-          ? `<p class="my-sites-subtitle revcoin-admin-sim-note">Admin: Buy Now simulates checkout — you get the coins and the same dollar amount is added to the simulated reward pool and your qualified spend for pool testing.</p>`
+          ? `<p class="my-sites-subtitle revcoin-admin-sim-note">Admin: Buy Now still supports local simulation in this build, but regular users now use backend checkout when configured.</p>`
           : ""
       }
 
@@ -1473,8 +1526,8 @@ function RevCoinStorePageComponent() {
             <div class="rule">- Better ad rotation priority</div>
           </div>
         </div>
-        <button type="button" class="btn btn-primary revcoin-pack-btn" onclick="RevCoinStoreUI.openPurchasePlaceholder()">
-          Upgrade (Coming Soon)
+        <button type="button" class="btn btn-primary revcoin-pack-btn" onclick="RevCoinStoreUI.onUpgradeBuyClick()">
+          Upgrade Now
         </button>
         ${
           isAdmin

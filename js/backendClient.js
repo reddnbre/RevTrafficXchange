@@ -80,6 +80,13 @@ const RTXBackendClient = {
     });
   },
 
+  async createCheckout(productKey) {
+    return this.request("/api/payments/checkout", {
+      method: "POST",
+      body: JSON.stringify({ productKey: String(productKey || "") })
+    });
+  },
+
   async logout() {
     try {
       await this.request("/api/auth/logout", { method: "POST", body: "{}" });
