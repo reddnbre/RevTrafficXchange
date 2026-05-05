@@ -1,3 +1,88 @@
+function SurfRail_escapeJs(value) {
+  if (typeof escapeJsSingleQuoted === "function") return escapeJsSingleQuoted(value);
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
+}
+
+function SurfRail_escapeAttr(value) {
+  if (typeof escapeHtmlAttr === "function") return escapeHtmlAttr(value);
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+function SurfRail_getTextAdsSlice() {
+  if (typeof normalizeMemberCampaigns === "function") normalizeMemberCampaigns();
+  const ads = Array.isArray(RTXState.user?.memberCampaigns?.textAds) ? RTXState.user.memberCampaigns.textAds : [];
+  return ads
+    .filter(
+      (ad) =>
+        ad &&
+        ad.active &&
+        String(ad.targetUrl || "").trim() &&
+        typeof getAvailableCampaignViews === "function" &&
+        getAvailableCampaignViews(ad, "views") > 0
+    )
+    .slice(0, 4);
+}
+
+function SurfRail_getBannerAdsSlice() {
+  if (typeof normalizeMemberCampaigns === "function") normalizeMemberCampaigns();
+  const ads = Array.isArray(RTXState.user?.memberCampaigns?.bannerAds) ? RTXState.user.memberCampaigns.bannerAds : [];
+  return ads
+    .filter(
+      (ad) =>
+        ad &&
+        ad.active &&
+        String(ad.targetUrl || "").trim() &&
+        String(ad.imageUrl || "").trim() &&
+        typeof getAvailableCampaignViews === "function" &&
+        getAvailableCampaignViews(ad, "impressions") > 0
+    )
+    .slice(0, 4);
+}
+
+function SurfRail_buildLeftColumnHtml() {
+  const ads = SurfRail_getTextAdsSlice();
+  const canClick = typeof TextAdsDisplayUI !== "undefined" && TextAdsDisplayUI && typeof TextAdsDisplayUI.clickAd === "function";
+  const parts = [];
+  for (let i = 0; i < 4; i += 1) {
+    const ad = ads[i];
+    if (ad && canClick) {
+      parts.push(
+        `<button type="button" class="surf-rail-slot surf-rail-slot--text panel" onclick="TextAdsDisplayUI.clickAd('${SurfRail_escapeJs(ad.id)}','${SurfRail_escapeJs(ad.targetUrl)}')"><span class="surf-rail-slot-title" title="${SurfRail_escapeAttr(ad.title)}">${SurfRail_escapeAttr(ad.title)}</span><span class="surf-rail-slot-cta">Visit →</span></button>`
+      );
+    } else {
+      parts.push(
+        `<button type="button" class="surf-rail-slot surf-rail-slot--placeholder panel" onclick="App.navigate('my-text-ads')"><span class="surf-rail-slot-ph">Put your text here</span></button>`
+      );
+    }
+  }
+  return parts.join("");
+}
+
+function SurfRail_buildRightColumnHtml() {
+  const ads = SurfRail_getBannerAdsSlice();
+  const canClick =
+    typeof BannerAdsDisplayUI !== "undefined" && BannerAdsDisplayUI && typeof BannerAdsDisplayUI.clickBanner === "function";
+  const parts = [];
+  for (let i = 0; i < 4; i += 1) {
+    const ad = ads[i];
+    if (ad && canClick) {
+      parts.push(
+        `<button type="button" class="surf-rail-slot surf-rail-slot--banner panel" onclick="BannerAdsDisplayUI.clickBanner('${SurfRail_escapeJs(ad.id)}','${SurfRail_escapeJs(ad.targetUrl)}')"><img class="surf-rail-slot-img" src="${SurfRail_escapeAttr(ad.imageUrl)}" alt="" loading="lazy" /></button>`
+      );
+    } else {
+      parts.push(
+        `<button type="button" class="surf-rail-slot surf-rail-slot--placeholder surf-rail-slot--banner-ph panel" onclick="App.navigate('my-banner-ads')"><span class="surf-rail-slot-ph">Put banner here</span></button>`
+      );
+    }
+  }
+  return parts.join("");
+}
+
 function SurfPageComponent() {
   SurfEngine.initAntiCheat();
   if (typeof checkDailyReset === "function") checkDailyReset();
@@ -21,9 +106,10 @@ function SurfPageComponent() {
   const anti = RTXState.antiCheat;
   const sessionLocked = RTXState.sessionCompleted || RTXState.surfPaused;
   const claimMultiplier = Math.max(1, Number(u.multiplier) || 1);
-  const creditsPerView = typeof CreditSystem !== "undefined" && CreditSystem && typeof CreditSystem.getCreditsForValidView === "function"
-    ? CreditSystem.getCreditsForValidView()
-    : Math.round((Number(RTXState.settings.baseCreditsPerView) || 1) * claimMultiplier);
+  const creditsPerView =
+    typeof CreditSystem !== "undefined" && CreditSystem && typeof CreditSystem.getCreditsForValidView === "function"
+      ? CreditSystem.getCreditsForValidView()
+      : Math.round((Number(RTXState.settings.baseCreditsPerView) || 1) * claimMultiplier);
   const activityMultiplier = typeof getActivityBoostMultiplier === "function" ? getActivityBoostMultiplier() : 1;
   const boostPct = Math.max(0, Math.round((activityMultiplier - 1) * 100));
   const boostTimeLeft = typeof getBoostTimeLeftText === "function" ? getBoostTimeLeftText() : "";
@@ -32,7 +118,7 @@ function SurfPageComponent() {
   const creditsWalletTitle =
     typeof RewardUX !== "undefined" && RewardUX && typeof RewardUX.getSurfCreditsWalletTooltip === "function"
       ? RewardUX.getSurfCreditsWalletTooltip()
-      : 'Wallet: traffic credits you already own and can spend.';
+      : "Wallet: traffic credits you already own and can spend.";
   const escAttr =
     typeof escapeHtmlAttr === "function"
       ? escapeHtmlAttr(creditsWalletTitle)
@@ -41,12 +127,15 @@ function SurfPageComponent() {
   const primaryAction = sessionLocked
     ? `<button class="btn btn-primary surf-claim-btn" onclick="SurfEngine.startNextSession()">Start Next Session</button>`
     : SurfEngine.isRunning
-    ? `<button class="btn btn-primary surf-claim-btn" disabled>Viewing Ad...</button>`
-    : anti.captchaRequired && !anti.captchaSolved
-      ? `<button class="btn btn-primary surf-claim-btn" disabled>Solve CAPTCHA to Claim</button>`
-    : canClaim
-      ? `<button class="btn btn-primary surf-claim-btn" onclick="SurfEngine.claimValidView()">Claim View + Next Ad</button>`
-      : `<button class="btn btn-primary surf-claim-btn" onclick="SurfEngine.startTimer()">Start Timer</button>`;
+      ? `<button class="btn btn-primary surf-claim-btn" disabled>Viewing Ad...</button>`
+      : anti.captchaRequired && !anti.captchaSolved
+        ? `<button class="btn btn-primary surf-claim-btn" disabled>Solve CAPTCHA to Claim</button>`
+        : canClaim
+          ? `<button class="btn btn-primary surf-claim-btn" onclick="SurfEngine.claimValidView()">Claim View + Next Ad</button>`
+          : `<button class="btn btn-primary surf-claim-btn" onclick="SurfEngine.startTimer()">Start Timer</button>`;
+
+  const surfRailLeft = SurfRail_buildLeftColumnHtml();
+  const surfRailRight = SurfRail_buildRightColumnHtml();
 
   return `
     <div class="surf-page">
@@ -73,13 +162,17 @@ function SurfPageComponent() {
       <div class="surf-anti-cheat-row">
         <div class="surf-warning">Stay on this tab while the timer runs.</div>
         <div class="surf-warning surf-warning-alert ${anti.statusMessage ? "" : "hidden"}" id="surf-anti-cheat-status">${anti.statusMessage || ""}</div>
-        ${anti.captchaRequired && !anti.captchaSolved ? `
+        ${
+          anti.captchaRequired && !anti.captchaSolved
+            ? `
           <div class="surf-captcha-box">
             <div class="surf-captcha-label">${anti.captchaPrompt}</div>
             <input id="surf-captcha-answer" class="surf-captcha-input" type="text" inputmode="numeric" placeholder="Answer" />
             <button type="button" class="btn btn-primary surf-captcha-btn" onclick="SurfEngine.verifyCaptcha()">Verify</button>
           </div>
-        ` : ""}
+        `
+            : ""
+        }
       </div>
 
       <div class="surf-anti-cheat-popup ${anti.popupVisible ? "" : "hidden"}" id="surf-anti-cheat-popup" role="alert" aria-live="polite">
@@ -89,17 +182,28 @@ function SurfPageComponent() {
       </div>
 
       <section class="panel surf-viewer-panel">
-        <div class="surf-browser-frame">
-          <div class="surf-browser-content">
-            <iframe
-              id="surf-active-frame"
-              class="surf-iframe"
-              src="${campaign.url}"
-              title="${campaign.title}"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-            ></iframe>
+        <p class="surf-viewer-loyalty-hint">View to boost Loyalty points</p>
+        <div class="surf-viewer-with-rails">
+          <aside class="surf-ad-rail surf-ad-rail--left" aria-label="Text ads, 468 by 60">
+            ${surfRailLeft}
+          </aside>
+          <div class="surf-viewer-center">
+            <div class="surf-browser-frame">
+              <div class="surf-browser-content">
+                <iframe
+                  id="surf-active-frame"
+                  class="surf-iframe"
+                  src="${campaign.url}"
+                  title="${campaign.title}"
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </div>
+            </div>
           </div>
+          <aside class="surf-ad-rail surf-ad-rail--right" aria-label="Banner ads, 468 by 60">
+            ${surfRailRight}
+          </aside>
         </div>
       </section>
 
