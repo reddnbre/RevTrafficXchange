@@ -475,6 +475,14 @@
   padding: 4px;
 }
 
+/*
+ * Surf iframe chrome (.surf-browser-frame) height:
+ * — Default (non–Hyper Mode): clamp(520px, 66vh, 720px) → between 520px and 720px, target 66% of viewport height.
+ * — Hyper Mode (.app-shell.hyper-mode): no fixed px — frame uses flex:1 and grows/shrinks with the remaining
+ *   viewport under the surf command bar, anti-cheat row, and info bar (iframe height follows that flex chain).
+ * — Short viewports: @media (max-height:700px) and min-width 900px sets non-hyper frame to 430px; hyper keeps
+ *   flex:1 with min-height 200px on the frame chain.
+ */
 .surf-browser-frame {
   border: 1px solid rgba(249, 115, 22, 0.28);
   border-radius: 18px;

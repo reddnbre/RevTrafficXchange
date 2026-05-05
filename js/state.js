@@ -1192,9 +1192,11 @@ function buildMemberAdLandingDataUrl(kind, ad) {
       .replace(/"/g, "&quot;");
   const isBanner = kind === "banner";
   const title = isBanner ? "Member Banner Ad" : String(ad && ad.title ? ad.title : "Member Text Ad");
-  const desc = isBanner ? "Discover this sponsor after your timer ends." : String(ad && ad.description ? ad.description : "");
+  const desc = isBanner ? "" : String(ad && ad.description ? ad.description : "");
   const imageUrl = isBanner ? esc(String(ad && ad.imageUrl ? ad.imageUrl : "")) : "";
-  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>body{font-family:Arial,sans-serif;background:#05080f;color:#e5e7eb;margin:0;min-height:100vh;display:grid;place-items:center}.card{width:min(900px,94vw);border:1px solid #1f2937;background:#0b1220;border-radius:14px;padding:22px}.k{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}.h{font-size:30px;color:#22d3ee;margin:8px 0}.d{color:#cbd5e1;margin-bottom:14px}.img{display:block;max-width:100%;max-height:260px;object-fit:contain;border:1px solid #1f2937;border-radius:10px;background:#020617;padding:6px;margin-bottom:12px}.cta{display:inline-block;padding:10px 14px;background:#f97316;color:#fff;text-decoration:none;border-radius:10px;font-weight:700}</style></head><body><main class="card"><div class="k">${isBanner ? "Member Banner" : "Member Text Ad"}</div><h1 class="h">${esc(title)}</h1><p class="d">${esc(desc)}</p>${isBanner && imageUrl ? `<img class="img" src="${imageUrl}" alt="member banner">` : ""}<a class="cta" href="${esc(target)}" target="_blank" rel="noopener noreferrer">Open Offer</a></main></body></html>`;
+  const sub = desc ? esc(desc) : "";
+  const subLine = sub ? `<span class="s">${sub}</span>` : "";
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>body{font-family:system-ui,Arial,sans-serif;background:#05080f;color:#e5e7eb;margin:0;min-height:100vh;display:grid;place-items:center}.bar{width:468px;height:60px;box-sizing:border-box;border:1px solid #334155;background:#0b1220;border-radius:8px;display:flex;align-items:center;gap:10px;padding:0 12px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,.35)}.bar a{color:inherit;text-decoration:none;display:flex;align-items:center;gap:10px;width:100%;height:100%;min-width:0}.thumb{width:120px;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#020617;border-radius:6px;border:1px solid #1e293b}.thumb img{max-width:118px;max-height:50px;object-fit:contain;display:block}.txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:2px}.t{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.s{font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.go{flex-shrink:0;font-size:12px;font-weight:800;color:#fb923c;padding:6px 10px;border-radius:8px;border:1px solid rgba(251,146,60,.45);background:rgba(251,146,60,.12)}</style></head><body><div class="bar"><a href="${esc(target)}" target="_blank" rel="noopener noreferrer">${isBanner && imageUrl ? `<span class="thumb"><img src="${imageUrl}" alt=""></span>` : ""}<span class="txt"><span class="t">${esc(title)}</span>${subLine}</span><span class="go">Open →</span></a></div></body></html>`;
   return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
@@ -1582,7 +1584,7 @@ function normalizeMemberCampaigns() {
     allocatedViews: Math.max(0, Number(ad.allocatedViews) || 0),
     size: ["300x250", "468x60", "728x90", "160x600"].includes(String(ad.size || ""))
       ? String(ad.size)
-      : "300x250",
+      : "468x60",
     createdAt: typeof ad.createdAt === "number" && !Number.isNaN(ad.createdAt) ? ad.createdAt : Date.now()
   }));
 }

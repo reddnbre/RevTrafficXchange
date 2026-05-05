@@ -500,7 +500,10 @@
 
 .public-ad-slot--placeholder-disabled,
 .public-ad-slot--placeholder-disabled:hover,
-.public-ad-slot--placeholder-disabled:focus-visible {
+.public-ad-slot--placeholder-disabled:focus-visible,
+.public-ad-slot-468.public-ad-slot--placeholder-disabled,
+.public-ad-slot-468.public-ad-slot--placeholder-disabled:hover,
+.public-ad-slot-468.public-ad-slot--placeholder-disabled:focus-visible {
   opacity: 0.48;
   cursor: not-allowed;
   border-color: rgba(255, 255, 255, 0.12);
@@ -735,52 +738,158 @@
   gap: 10px;
 }
 
-.public-ad-slots-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (min-width: 720px) {
-  .public-ad-slots-grid--text,
-  .public-ad-slots-grid--banner {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.public-ad-slot--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 140px;
-  margin: 0;
+/* 468×60 IAB-style board: two columns × four rows (eight slots total). */
+.public-ad-board-468-outer {
   width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.public-ad-board-468-wrap {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 14px 18px;
+  justify-content: center;
+  align-items: flex-start;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.public-ad-board-468-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 468px;
+  flex: 0 0 auto;
+}
+
+.public-ad-slot-468 {
+  box-sizing: border-box;
+  width: 468px;
+  height: 60px;
+  flex: 0 0 auto;
+  margin: 0;
+  border-radius: 10px;
+  padding: 4px 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+
+button.public-ad-slot-468 {
+  cursor: pointer;
+}
+
+.public-ad-slot-468--placeholder {
+  justify-content: center;
   text-align: center;
   cursor: pointer;
   border: 2px dashed rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
   color: var(--muted);
-  font: inherit;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
-.public-ad-slot--placeholder:hover,
-.public-ad-slot--placeholder:focus-visible {
+.public-ad-slot-468--placeholder:hover,
+.public-ad-slot-468--placeholder:focus-visible {
   border-color: rgba(251, 191, 36, 0.55);
   background: rgba(251, 191, 36, 0.06);
   color: #fde68a;
   outline: none;
 }
 
-.public-ad-slot-placeholder-text {
-  font-size: 15px;
-  font-weight: 600;
+.public-ad-slot-468-placeholder-label {
+  font-size: 14px;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
-.public-ad-slot--banner-placeholder {
-  min-height: 160px;
+.public-ad-slot-468--text {
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.public-ad-slot-468-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.public-ad-slot-468-cta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: #fb923c;
+}
+
+.public-ad-slot-468--text-manage {
+  justify-content: flex-start;
+}
+
+.public-ad-slot-468--text-manage .public-ad-slot-468-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.public-ad-slot-468-edit {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.public-ad-slot-468--banner {
+  padding: 3px 8px;
+  justify-content: center;
+}
+
+.public-ad-slot-468-banner-img {
+  display: block;
+  max-width: 440px;
+  width: 100%;
+  height: 52px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.public-ad-slot-468--banner-manage {
+  padding: 3px 8px;
+  gap: 8px;
+}
+
+.public-ad-slot-468--banner-manage .public-ad-slot-468-banner-img {
+  flex: 1;
+  min-width: 0;
+  width: 0;
+  height: 52px;
+}
+
+.public-ad-slot-468--banner-manage .public-ad-slot-468-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.public-ad-slot-468-edit-lbl {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fdba74;
 }
 
 .text-ad-card {
