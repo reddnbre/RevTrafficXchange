@@ -5,7 +5,6 @@ const AdminBackOffice = {
     { id: "spotlightAds", label: "Spotlight Ads" },
     { id: "bannerAds", label: "Banner Ads" },
     { id: "rewardPool", label: "Reward Pool" },
-    { id: "rewardSandbox", label: "Reward Sandbox" },
     { id: "miniGames", label: "Mini-Games" },
     { id: "systemHealth", label: "System Health" },
     { id: "siteEmbed", label: "Monetag / Site embed" },
@@ -84,10 +83,6 @@ const AdminBackOffice = {
   },
   systemHealthMessage: "",
   systemHealthMessageTone: "neutral",
-  testWalletDraft: {
-    creditsAdd: "10000",
-    coinsAdd: "500"
-  },
 
   rewardSandboxDraft: {
     simulatedRevenue: "10000",
@@ -461,49 +456,6 @@ const AdminBackOffice = {
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
-  },
-
-  updateTestWalletDraft(field, value) {
-    this.testWalletDraft[field] = value;
-    App.render();
-  },
-
-  runAdminTestWalletTopUp() {
-    if (typeof applyAdminTestWalletTopUp !== "function") return;
-    const ok = applyAdminTestWalletTopUp(this.testWalletDraft.creditsAdd, this.testWalletDraft.coinsAdd);
-    this.systemHealthMessage = ok
-      ? "Test wallet top-up applied. Premium RevCoin adds also simulate $ into the reward pool + qualified spend (local testing)."
-      : "Could not apply top-up (check amounts / admin access).";
-    this.systemHealthMessageTone = ok ? "success" : "error";
-    App.render();
-  },
-
-  runAdminTestMembershipUpgrade() {
-    if (typeof applyAdminTestMembership !== "function") return;
-    const ok = applyAdminTestMembership("upgraded");
-    this.systemHealthMessage = ok
-      ? "Membership set to Upgraded (test). $10 simulated revenue split (site / reserve / pool) + qualified spend."
-      : "Action blocked.";
-    this.systemHealthMessageTone = ok ? "success" : "error";
-    App.render();
-  },
-
-  runAdminTestMembershipFree() {
-    if (typeof applyAdminTestMembership !== "function") return;
-    const ok = applyAdminTestMembership("free");
-    this.systemHealthMessage = ok ? "Membership set to Free (test)." : "Action blocked.";
-    this.systemHealthMessageTone = ok ? "success" : "error";
-    App.render();
-  },
-
-  runAdminResetTodaysDailyCounters() {
-    if (typeof resetTodaysDailyCountersForAdminTest !== "function") return;
-    const ok = resetTodaysDailyCountersForAdminTest();
-    this.systemHealthMessage = ok
-      ? "Today’s daily counters reset (views, activity score, ad view locks, mini-game ledger, session mini-game throttle)."
-      : "Action blocked.";
-    this.systemHealthMessageTone = ok ? "success" : "error";
-    App.render();
   },
 
   saveMiniGameSettings() {
@@ -1257,65 +1209,6 @@ const AdminBackOffice = {
           <li><strong>Pool-reference cap</strong> — Section 4 ties to simulated pool release math for admins who want to compare scale.</li>
           <li><strong>Not Available</strong> — reference cap could not be computed from current settings.</li>
         </ul>
-      </div>
-
-      <div class="admin-system-health-section panel admin-system-health-test">
-        <h4>Section 6: Local testing (admin only)</h4>
-        <p class="admin-system-health-muted">
-          Fake balances and resets are stored in your browser only. No real payments. Use this to exercise pool math, upgrades, and daily counters.
-        </p>
-        <div class="admin-system-health-test-grid">
-          <div>
-            <div class="admin-system-health-test-title">Test wallet top-up</div>
-            <label>
-              Credits to add
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value="${this.testWalletDraft.creditsAdd}"
-                oninput="AdminBackOffice.updateTestWalletDraft('creditsAdd', this.value)"
-              />
-            </label>
-            <label>
-              Premium RevCoins to add
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value="${this.testWalletDraft.coinsAdd}"
-                oninput="AdminBackOffice.updateTestWalletDraft('coinsAdd', this.value)"
-              />
-            </label>
-            <button type="button" class="admin-action-btn" onclick="AdminBackOffice.runAdminTestWalletTopUp()">
-              Apply test top-up
-            </button>
-          </div>
-          <div>
-            <div class="admin-system-health-test-title">Membership (test)</div>
-            <p class="admin-system-health-muted">Sets <code>membershipLevel</code> / <code>isPaid</code> for surf timers and slot limits.</p>
-            <div class="admin-system-health-test-actions">
-              <button type="button" class="admin-action-btn" onclick="AdminBackOffice.runAdminTestMembershipUpgrade()">
-                Set Upgraded
-              </button>
-              <button type="button" class="admin-action-btn" onclick="AdminBackOffice.runAdminTestMembershipFree()">
-                Set Free
-              </button>
-            </div>
-          </div>
-          <div>
-            <div class="admin-system-health-test-title">Daily counters</div>
-            <p class="admin-system-health-muted">
-              Resets today’s surf view count, daily activity score, loyalty ad view locks, mini-game daily ledger, and captcha view counter—without waiting for midnight.
-            </p>
-            <button type="button" class="admin-action-btn" onclick="AdminBackOffice.runAdminResetTodaysDailyCounters()">
-              Reset today’s daily counters
-            </button>
-          </div>
-        </div>
-        <p class="admin-system-health-test-note">
-          Real calendar rollover also clears <strong>viewsToday</strong> and <strong>viewed ad rewards</strong> so daily tasks and pool drivers line up with the new day.
-        </p>
       </div>
     `;
   },
@@ -2179,7 +2072,6 @@ const AdminBackOffice = {
         </div>
       `,
       rewardPool: this.renderRewardPoolBody(),
-      rewardSandbox: this.renderRewardSandboxBody(),
       miniGames: this.renderMiniGamesBody(),
       systemHealth: this.renderSystemHealthBody(),
       siteEmbed: this.renderSiteEmbedBody(),
@@ -2187,7 +2079,6 @@ const AdminBackOffice = {
         <h3>Platform Settings</h3>
         <p>Configure global toggles and platform defaults for admin workflows.</p>
         <div class="admin-placeholder-list">
-          <div>Placeholder: test mode / demo mode toggle</div>
           <div>Placeholder: default timers and session guardrail settings</div>
           <div>Placeholder: maintenance and announcements controls</div>
         </div>

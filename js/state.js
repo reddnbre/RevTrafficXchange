@@ -254,7 +254,7 @@ const RTXUserPersist = {
     if (!RTXState.session || !RTXState.session.isAuthenticated) {
       return `${this.keyPrefix}:__guest__`;
     }
-    const sessionId = String(RTXState.session.currentUserId || "").trim();
+    const sessionId = String(RTXState.session.currentUserId || "").trim().toLowerCase();
     const userId = sessionId || "__guest__";
     return `${this.keyPrefix}:${userId}`;
   },
@@ -1641,9 +1641,11 @@ function getCurrentUserId() {
   if (!RTXState.session || !RTXState.session.isAuthenticated) {
     return "__guest__";
   }
-  const fromSession = String(RTXState.session.currentUserId || "").trim();
+  const fromSession = String(RTXState.session.currentUserId || "").trim().toLowerCase();
   if (fromSession) return fromSession;
-  const fromUser = String(RTXState.user && RTXState.user.id ? RTXState.user.id : "").trim();
+  const fromUser = String(RTXState.user && RTXState.user.id ? RTXState.user.id : "")
+    .trim()
+    .toLowerCase();
   if (fromUser && fromUser !== "__guest__") return fromUser;
   return "__guest__";
 }

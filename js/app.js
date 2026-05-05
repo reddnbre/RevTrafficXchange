@@ -138,6 +138,13 @@ const App = {
 
   logout() {
     try {
+      if (typeof RTXUserPersist !== "undefined" && RTXUserPersist.save) {
+        RTXUserPersist.save();
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    try {
       localStorage.removeItem(RTXSessionAuth.lastUserKey);
     } catch (e) {
       /* ignore */
