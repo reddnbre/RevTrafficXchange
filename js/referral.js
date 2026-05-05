@@ -5,8 +5,12 @@
 (function referralModule() {
   const STORAGE_KEY = "rtx_pending_ref_v1";
 
-  /** Default share target (GitHub Pages). Override: set window.RTX_PUBLIC_BASE_URL before scripts load. */
-  const DEFAULT_PUBLIC_BASE = "https://reddnbre.github.io/RevTrafficXchange/";
+  /**
+   * Default share target (custom domain on GitHub Pages).
+   * Override: set window.RTX_PUBLIC_BASE_URL before scripts load.
+   * Until DNS is live, you can temporarily set it to https://reddnbre.github.io/RevTrafficXchange/
+   */
+  const DEFAULT_PUBLIC_BASE = "https://revtrafficxchange.com/";
 
   function sanitizeHandle(raw) {
     return String(raw || "")
