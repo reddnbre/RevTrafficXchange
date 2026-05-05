@@ -8,6 +8,7 @@ const AdminBackOffice = {
     { id: "rewardSandbox", label: "Reward Sandbox" },
     { id: "miniGames", label: "Mini-Games" },
     { id: "systemHealth", label: "System Health" },
+    { id: "siteEmbed", label: "Monetag / Site embed" },
     { id: "settings", label: "Settings" }
   ],
   usersSearchQuery: "",
@@ -98,6 +99,10 @@ const AdminBackOffice = {
   },
   rewardSandboxResult: null,
 
+  siteEmbedDraft: { headHtml: "", bodyHtml: "" },
+  siteEmbedFeedback: "",
+  siteEmbedFeedbackTone: "neutral",
+
   setTab(tabId) {
     const isKnown = this.tabs.some((tab) => tab.id === tabId);
     RTXState.adminView = isKnown ? tabId : "users";
@@ -122,7 +127,99 @@ const AdminBackOffice = {
       this.systemHealthMessageTone = "neutral";
       this.syncRevenuePreviewDraftFromState();
     }
+    if (tabId === "siteEmbed") {
+      this.syncSiteEmbedDraftFromState();
+      this.siteEmbedFeedback = "";
+      this.siteEmbedFeedbackTone = "neutral";
+    }
     App.render();
+  },
+
+  syncSiteEmbedDraftFromState() {
+    const s = (RTXState.admin && RTXState.admin.siteEmbed) || {};
+    this.siteEmbedDraft = {
+      headHtml: String(s.headHtml || ""),
+      bodyHtml: String(s.bodyHtml || "")
+    };
+  },
+
+  updateSiteEmbedDraft(field, value) {
+    if (field === "headHtml") this.siteEmbedDraft.headHtml = value;
+    else if (field === "bodyHtml") this.siteEmbedDraft.bodyHtml = value;
+    App.render();
+  },
+
+  saveSiteEmbed() {
+    if (!RTXState.admin) return;
+    RTXState.admin.siteEmbed = {
+      headHtml: String(this.siteEmbedDraft.headHtml || ""),
+      bodyHtml: String(this.siteEmbedDraft.bodyHtml || "")
+    };
+    if (typeof normalizeAdminSiteEmbed === "function") normalizeAdminSiteEmbed();
+    if (typeof RTXAdminPersist !== "undefined" && RTXAdminPersist.save) RTXAdminPersist.save();
+    this.siteEmbedFeedback = "Saved to admin storage on this browser (local backup).";
+    this.siteEmbedFeedbackTone = "success";
+    App.render();
+  },
+
+  previewSiteEmbed() {
+    if (typeof RTXSiteEmbedInject === "undefined" || !RTXSiteEmbedInject || typeof RTXSiteEmbedInject.run !== "function") {
+      this.siteEmbedFeedback = "js/siteEmbed.js is not loaded. Check index.html.";
+      this.siteEmbedFeedbackTone = "error";
+      App.render();
+      return;
+    }
+    RTXSiteEmbedInject.run({
+      headHtml: String(this.siteEmbedDraft.headHtml || ""),
+      bodyHtml: String(this.siteEmbedDraft.bodyHtml || "")
+    });
+    this.siteEmbedFeedback =
+      "Preview injected on this device. Hard refresh clears it until you deploy the snippet for everyone.";
+    this.siteEmbedFeedbackTone = "neutral";
+    App.render();
+  },
+
+  exportSiteEmbedInstallSnippet() {
+    const head = String(this.siteEmbedDraft.headHtml || "");
+    const body = String(this.siteEmbedDraft.bodyHtml || "");
+    const json = JSON.stringify({ headHtml: head, bodyHtml: body });
+    const snippet =
+      "<!-- Paste into index.html immediately BEFORE <script src=\"js/siteEmbed.js\"></script>, then commit & push. -->\n" +
+      "<script>\n" +
+      "window.RTX_SITE_EMBED = " +
+      json +
+      ";\n" +
+      "</script>\n";
+    try {
+      const blob = new Blob([snippet], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "rtx-site-embed-install-snippet.txt";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        URL.revokeObjectURL(a.href);
+        a.remove();
+      }, 0);
+      this.siteEmbedFeedback = "Download started. Add the file contents to index.html so Monetag can see your verification.";
+      this.siteEmbedFeedbackTone = "success";
+    } catch (e) {
+      this.siteEmbedFeedback = "Download failed. Copy the snippet manually from the browser console.";
+      this.siteEmbedFeedbackTone = "error";
+    }
+    App.render();
+  },
+
+  fillSiteEmbedTextareas() {
+    try {
+      if (RTXState.adminView !== "siteEmbed") return;
+      const h = document.getElementById("rtx-admin-siteembed-head");
+      const b = document.getElementById("rtx-admin-siteembed-body");
+      if (h) h.value = this.siteEmbedDraft.headHtml;
+      if (b) b.value = this.siteEmbedDraft.bodyHtml;
+    } catch (e) {
+      /* ignore */
+    }
   },
 
   syncRewardPoolDraftFromState() {
@@ -2005,6 +2102,53 @@ const AdminBackOffice = {
     `;
   },
 
+  renderSiteEmbedBody() {
+    const fb = this.siteEmbedFeedback
+      ? `<div class="admin-siteembed-feedback admin-siteembed-feedback--${this.siteEmbedFeedbackTone}">${this.escapeSystemHealthNotes(this.siteEmbedFeedback)}</div>`
+      : "";
+    return `
+      <h3>Monetag &amp; site verification</h3>
+      <p class="admin-siteembed-lead">
+        Paste <strong>ownership / verification</strong> tags (usually a <code>&lt;meta&gt;</code>) into <strong>Head HTML</strong>,
+        and Monetag / ad loader snippets that belong before <code>&lt;/body&gt;</code> into <strong>End of body HTML</strong>.
+        This demo app has <strong>no server</strong>: crawlers only see what is in the <strong>deployed</strong> <code>index.html</code> on GitHub.
+      </p>
+      <div class="admin-siteembed-warning panel" role="note">
+        <strong>Production flow:</strong> use <strong>Export install snippet</strong>, paste the downloaded block into
+        <code>index.html</code> <em>above</em> <code>&lt;script src="js/siteEmbed.js"&gt;&lt;/script&gt;</code>, commit, and push.
+        <strong>Save</strong> here only keeps a backup in this browser’s admin storage.
+      </div>
+      ${fb}
+      <div class="admin-siteembed-grid">
+        <div class="admin-siteembed-field panel">
+          <label class="admin-siteembed-label">Head HTML (meta verification, head scripts)</label>
+          <textarea
+            id="rtx-admin-siteembed-head"
+            class="admin-siteembed-textarea"
+            rows="10"
+            spellcheck="false"
+            oninput="AdminBackOffice.updateSiteEmbedDraft('headHtml', this.value)"
+          ></textarea>
+        </div>
+        <div class="admin-siteembed-field panel">
+          <label class="admin-siteembed-label">End of body HTML (Monetag body script, etc.)</label>
+          <textarea
+            id="rtx-admin-siteembed-body"
+            class="admin-siteembed-textarea"
+            rows="10"
+            spellcheck="false"
+            oninput="AdminBackOffice.updateSiteEmbedDraft('bodyHtml', this.value)"
+          ></textarea>
+        </div>
+      </div>
+      <div class="admin-siteembed-actions">
+        <button type="button" class="admin-action-btn" onclick="AdminBackOffice.saveSiteEmbed()">Save (this browser)</button>
+        <button type="button" class="admin-action-btn" onclick="AdminBackOffice.previewSiteEmbed()">Preview on this device</button>
+        <button type="button" class="admin-action-btn" onclick="AdminBackOffice.exportSiteEmbedInstallSnippet()">Export install snippet</button>
+      </div>
+    `;
+  },
+
   renderTabs() {
     return this.tabs
       .map(
@@ -2038,6 +2182,7 @@ const AdminBackOffice = {
       rewardSandbox: this.renderRewardSandboxBody(),
       miniGames: this.renderMiniGamesBody(),
       systemHealth: this.renderSystemHealthBody(),
+      siteEmbed: this.renderSiteEmbedBody(),
       settings: `
         <h3>Platform Settings</h3>
         <p>Configure global toggles and platform defaults for admin workflows.</p>

@@ -487,6 +487,9 @@ const App = {
     if (typeof queueMicrotask === "function") {
       queueMicrotask(() => {
         if (typeof manageTrafficBoostCountdown === "function") manageTrafficBoostCountdown();
+        if (typeof AdminBackOffice !== "undefined" && typeof AdminBackOffice.fillSiteEmbedTextareas === "function") {
+          AdminBackOffice.fillSiteEmbedTextareas();
+        }
       });
     }
   }

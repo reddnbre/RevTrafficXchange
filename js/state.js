@@ -204,6 +204,11 @@ const RTXState = {
       platformBalance: 0,
       reserveBalance: 0,
       withdrawalLog: []
+    },
+    /** Monetag / meta verification / ad tags — also export to index.html or window.RTX_SITE_EMBED for all visitors. */
+    siteEmbed: {
+      headHtml: "",
+      bodyHtml: ""
     }
   },
   surfPaused: false,
@@ -543,6 +548,10 @@ const RTXAdminPersist = {
       if (data.revenueTreasury && typeof data.revenueTreasury === "object") {
         RTXState.admin.revenueTreasury = { ...RTXState.admin.revenueTreasury, ...data.revenueTreasury };
       }
+
+      if (data.siteEmbed && typeof data.siteEmbed === "object") {
+        RTXState.admin.siteEmbed = { ...RTXState.admin.siteEmbed, ...data.siteEmbed };
+      }
     } catch (e) {
       /* ignore corrupt storage */
     }
@@ -561,7 +570,8 @@ const RTXAdminPersist = {
           rewardPoolTesting: RTXState.rewardPoolTesting,
           miniGameSettings: RTXState.miniGameSettings,
           revenuePreview: RTXState.admin.revenuePreview,
-          revenueTreasury: RTXState.admin.revenueTreasury
+          revenueTreasury: RTXState.admin.revenueTreasury,
+          siteEmbed: RTXState.admin.siteEmbed
         })
       );
     } catch (e) {
@@ -572,6 +582,17 @@ const RTXAdminPersist = {
 
 RTXAdminPersist.load();
 normalizeRewardPoolTesting();
+
+function normalizeAdminSiteEmbed() {
+  if (!RTXState.admin || typeof RTXState.admin !== "object") return;
+  const raw = RTXState.admin.siteEmbed && typeof RTXState.admin.siteEmbed === "object" ? RTXState.admin.siteEmbed : {};
+  RTXState.admin.siteEmbed = {
+    headHtml: String(raw.headHtml || "").slice(0, 80000),
+    bodyHtml: String(raw.bodyHtml || "").slice(0, 80000)
+  };
+}
+
+normalizeAdminSiteEmbed();
 
 function roundMoney2(n) {
   const v = Number(n);

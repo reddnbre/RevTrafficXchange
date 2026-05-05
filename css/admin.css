@@ -1028,3 +1028,94 @@
     align-items: flex-start;
   }
 }
+
+.admin-siteembed-lead {
+  margin: 0 0 12px;
+  color: #e2e8f0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.admin-siteembed-lead code {
+  font-size: 0.82rem;
+}
+
+.admin-siteembed-warning {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.admin-siteembed-warning code {
+  font-size: 0.8rem;
+}
+
+.admin-siteembed-feedback {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+
+.admin-siteembed-feedback--success {
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #bbf7d0;
+}
+
+.admin-siteembed-feedback--neutral {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #e2e8f0;
+}
+
+.admin-siteembed-feedback--error {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: #fecaca;
+}
+
+.admin-siteembed-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 960px) {
+  .admin-siteembed-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-siteembed-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.admin-siteembed-textarea {
+  width: 100%;
+  min-height: 180px;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  color: #f8fafc;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  resize: vertical;
+}
+
+.admin-siteembed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
