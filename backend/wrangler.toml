@@ -5,13 +5,13 @@ compatibility_date = "2026-05-05"
 [[d1_databases]]
 binding = "DB"
 database_name = "revtrafficxchange"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "a4c15298-4982-4024-8749-82cd0d160ad4"
 
 [vars]
 APP_BASE_URL = "https://revtrafficxchange.com"
 STRIPE_PRICE_MEMBERSHIP_PRO_MONTHLY = "price_replace_membership"
 STRIPE_PRICE_REVCOINS_50 = "price_replace_revcoins_50"
 STRIPE_PRICE_REVCOINS_120 = "price_replace_revcoins_120"
-STRIPE_PRICE_REVCOINS_260 = "price_replace_revcoins_260"
+STRIPE_PRICE_REVCOINS_260 = "price_1TTdF5BoSXy0EewRrwlajq1h"
 STRIPE_PRICE_REVCOINS_700 = "price_replace_revcoins_700"
 STRIPE_PRICE_CREDITS_1000_PACK = "price_replace_credits"
