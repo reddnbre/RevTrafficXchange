@@ -67,6 +67,22 @@ If `baseUrl` is missing, frontend stays in local-only mode.
 
 ## Stripe setup
 
+### Optional: create catalog products/prices automatically (Windows)
+
+Stripe (and every bank) requires **one human sign-in** so nobody can charge your account without permission. After `stripe login` once, you can avoid the Dashboard product wizard:
+
+1. Open PowerShell in `backend\`.
+2. Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-stripe-products.ps1
+```
+
+3. Open the generated `backend\wrangler.stripe-ids.snippet.toml` and copy the `STRIPE_PRICE_*` lines into `backend\wrangler.toml` under `[vars]`.
+4. Deploy: `npx wrangler deploy`
+
+Edit dollar amounts in `backend\scripts\setup-stripe-products.ps1` if you want different prices.
+
 1) Set Worker secrets:
 
 ```bash
