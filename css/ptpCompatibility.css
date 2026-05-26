@@ -1,0 +1,77 @@
+/* PTP / manual traffic exchange compatibility layer.
+   Keeps the promoted site large, visible, and traceable for strict PTP programs. */
+
+.surf-viewer-panel--frame-compatible .surf-viewer-loyalty-hint {
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  color: rgba(253, 186, 116, 0.9);
+}
+
+.surf-viewer-panel--frame-compatible .surf-viewer-with-rails,
+.surf-viewer-with-rails {
+  flex-direction: column;
+  align-items: center;
+}
+
+.surf-viewer-panel--frame-compatible .surf-viewer-center,
+.surf-viewer-center {
+  order: -1;
+  width: 100%;
+}
+
+.surf-viewer-panel--frame-compatible .surf-browser-frame,
+.surf-browser-frame {
+  width: 100%;
+  min-height: 450px;
+  height: clamp(520px, 72vh, 780px);
+}
+
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-frame,
+.app-shell.hyper-mode .surf-browser-frame {
+  flex: 1 1 auto;
+  min-height: 450px;
+}
+
+.surf-viewer-panel--frame-compatible .surf-browser-content,
+.surf-viewer-panel--frame-compatible .surf-iframe,
+.surf-browser-content,
+.surf-iframe {
+  min-height: inherit;
+}
+
+.surf-viewer-panel--frame-compatible .surf-ad-rail,
+.surf-ad-rail {
+  width: min(100%, 968px);
+  max-width: 968px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 468px));
+  justify-content: center;
+  align-items: start;
+}
+
+.surf-viewer-panel--frame-compatible .surf-rail-slot,
+.surf-rail-slot {
+  max-width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .surf-viewer-panel--frame-compatible .surf-browser-frame,
+  .surf-browser-frame,
+  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-frame,
+  .app-shell.hyper-mode .surf-browser-frame {
+    min-height: 300px;
+    height: clamp(300px, 62vh, 560px);
+  }
+
+  .surf-viewer-panel--frame-compatible .surf-ad-rail,
+  .surf-ad-rail {
+    grid-template-columns: minmax(0, 468px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .surf-viewer-panel--frame-compatible .surf-browser-frame,
+  .surf-browser-frame {
+    min-width: min(100%, 1024px);
+  }
+}
