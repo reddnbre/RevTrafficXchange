@@ -13,6 +13,7 @@ const MiniGameUI = {
     const contentHTML = String(opts.contentHTML || "");
     const footerHTML = String(opts.footerHTML || "");
     const closeOnBackdropClick = opts.closeOnBackdropClick !== false;
+    const themeClass = this.getThemeClass(title);
     this.onClose = typeof opts.onClose === "function" ? opts.onClose : null;
 
     // Internal re-render should not fire external onClose handlers.
@@ -20,10 +21,11 @@ const MiniGameUI = {
 
     const overlay = document.createElement("div");
     overlay.id = this.overlayId;
-    overlay.className = "mg-overlay";
+    overlay.className = `mg-overlay ${themeClass}`;
     overlay.innerHTML = `
-      <div class="mg-card mg-glow-pulse" role="dialog" aria-modal="true" aria-label="${this.escapeAttr(title)}">
+      <div class="mg-card mg-glow-pulse ${themeClass}__card" role="dialog" aria-modal="true" aria-label="${this.escapeAttr(title)}">
         <div class="mg-header">
+          <div class="mg-kicker">RevTrafficXchange Bonus</div>
           <h3 class="mg-title">${this.escapeHtml(title)}</h3>
         </div>
         <div class="mg-content">${contentHTML}</div>
@@ -52,6 +54,14 @@ const MiniGameUI = {
     const cb = this.onClose;
     this.onClose = null;
     if (typeof cb === "function") cb();
+  },
+
+  getThemeClass(title) {
+    const normalized = String(title || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return `mg-theme-${normalized || "challenge"}`;
   },
 
   escapeHtml(value) {
