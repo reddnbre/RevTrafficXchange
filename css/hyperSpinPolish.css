@@ -1,0 +1,365 @@
+/* Hyper Spin polish layer. Keeps odds and rewards unchanged. */
+
+.rtx-hyper-modal-overlay.modal-overlay {
+  padding: 14px;
+  background:
+    radial-gradient(circle at 50% 14%, rgba(249, 115, 22, 0.22), transparent 32%),
+    radial-gradient(circle at 18% 84%, rgba(96, 165, 250, 0.16), transparent 30%),
+    rgba(0, 0, 0, 0.78);
+}
+
+.rtx-hyper-modal {
+  width: min(560px, 96vw);
+  max-width: min(560px, 96vw);
+  overflow: hidden;
+  border-radius: 26px;
+  padding: 0;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.06), transparent 28%),
+    radial-gradient(circle at 80% 10%, rgba(249, 115, 22, 0.24), transparent 30%),
+    radial-gradient(circle at 10% 85%, rgba(96, 165, 250, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(17, 17, 20, 0.98), rgba(4, 6, 12, 0.98));
+  box-shadow:
+    0 34px 100px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(249, 115, 22, 0.35),
+    0 0 62px rgba(249, 115, 22, 0.2);
+}
+
+.rtx-hyper-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 70%);
+}
+
+.rtx-hyper-modal-orbit {
+  position: absolute;
+  inset: -46%;
+  pointer-events: none;
+  opacity: 0.18;
+  background: conic-gradient(from 0deg, transparent, rgba(249, 115, 22, 0.42), transparent, rgba(96, 165, 250, 0.36), transparent);
+  animation: rtx-hyper-polish-orbit 8s linear infinite;
+}
+
+@keyframes rtx-hyper-polish-orbit {
+  to { transform: rotate(360deg); }
+}
+
+.rtx-hyper-modal-head,
+.rtx-hyper-machine,
+.rtx-hyper-prize-panel,
+.rtx-hyper-modal-actions,
+.rtx-hyper-result-card {
+  position: relative;
+  z-index: 2;
+}
+
+.rtx-hyper-modal-head {
+  padding: 24px 24px 10px;
+  text-align: center;
+}
+
+.rtx-hyper-modal-kicker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border: 1px solid rgba(249, 115, 22, 0.38);
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.11);
+  color: #fdba74;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rtx-hyper-modal h2 {
+  margin: 0 0 8px;
+  font-size: clamp(1.45rem, 5vw, 2.2rem);
+  line-height: 1.08;
+  letter-spacing: 0;
+  text-shadow: 0 0 24px rgba(249, 115, 22, 0.28);
+}
+
+.rtx-hyper-modal-sub {
+  max-width: 420px;
+  margin: 0 auto;
+  color: rgba(245, 245, 245, 0.72);
+}
+
+.rtx-hyper-machine {
+  margin: 14px 20px 14px;
+  padding: 14px;
+  border: 1px solid rgba(249, 115, 22, 0.24);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(0, 0, 0, 0.22)),
+    rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.rtx-hyper-machine--running {
+  border-color: rgba(96, 165, 250, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 34px rgba(96, 165, 250, 0.12);
+}
+
+.rtx-hyper-machine-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: rgba(245, 245, 245, 0.68);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rtx-hyper-machine-topline strong {
+  color: #fdba74;
+}
+
+.rtx-hyper-slot {
+  min-height: 172px;
+  margin: 0;
+  border-radius: 20px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.22), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.36));
+}
+
+.rtx-hyper-slot__badge {
+  color: rgba(255, 208, 138, 0.96);
+}
+
+.rtx-hyper-slot__reel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+  margin: 8px 0;
+  padding: 12px;
+  border-radius: 16px;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.36), rgba(255, 255, 255, 0.055), rgba(0, 0, 0, 0.36)),
+    rgba(0, 0, 0, 0.26);
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.46),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.rtx-hyper-slot__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff7ed, #ff7a18 58%, #7c2d12);
+  color: #110704;
+  font-size: 1.35rem;
+  font-weight: 1000;
+  filter: drop-shadow(0 0 18px rgba(249, 115, 22, 0.42));
+}
+
+.rtx-hyper-slot--credits .rtx-hyper-slot__icon {
+  background: linear-gradient(145deg, #dcfce7, #22c55e 58%, #14532d);
+}
+
+.rtx-hyper-slot--multiplier .rtx-hyper-slot__icon {
+  background: linear-gradient(145deg, #dbeafe, #60a5fa 58%, #1e3a8a);
+}
+
+.rtx-hyper-slot--none .rtx-hyper-slot__icon {
+  background: linear-gradient(145deg, #f4f4f5, #71717a 58%, #27272a);
+}
+
+.rtx-hyper-slot__label {
+  min-height: 1.5em;
+  font-size: clamp(1.35rem, 5.5vw, 2rem);
+  font-weight: 1000;
+}
+
+.rtx-hyper-progress {
+  overflow: hidden;
+  height: 9px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rtx-hyper-progress span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #60a5fa, #ffb03a, #f97316);
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.48);
+  transition: width 80ms linear;
+}
+
+.rtx-hyper-prize-panel {
+  margin: 0 20px 14px;
+}
+
+.rtx-hyper-prize-heading {
+  margin: 0 0 8px;
+  color: #fdba74;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rtx-hyper-prize-pool {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.rtx-hyper-prize-pool li,
+.rtx-hyper-prize-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.rtx-hyper-prize-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtx-hyper-prize-row em {
+  flex: 0 0 auto;
+  color: rgba(253, 186, 116, 0.9);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.rtx-hyper-prize-row--lit {
+  color: #fff;
+  border-color: rgba(249, 115, 22, 0.65);
+  background: rgba(249, 115, 22, 0.18);
+  box-shadow: 0 0 18px rgba(249, 115, 22, 0.24);
+}
+
+.rtx-hyper-result-card {
+  display: grid;
+  gap: 7px;
+  margin: 18px 20px 8px;
+  padding: 24px 20px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.32), transparent 44%),
+    linear-gradient(145deg, rgba(249, 115, 22, 0.18), rgba(96, 165, 250, 0.1));
+  border-color: rgba(249, 115, 22, 0.58);
+}
+
+.rtx-hyper-result-card__eyebrow,
+.rtx-hyper-result-card__sub {
+  color: rgba(245, 245, 245, 0.68);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.rtx-hyper-result-card strong {
+  color: #fff7ed;
+  font-size: clamp(1.75rem, 7vw, 2.7rem);
+  line-height: 1.05;
+}
+
+.rtx-hyper-result-card--credits {
+  border-color: rgba(34, 197, 94, 0.58);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(34, 197, 94, 0.22), transparent 44%),
+    linear-gradient(145deg, rgba(34, 197, 94, 0.14), rgba(249, 115, 22, 0.1));
+}
+
+.rtx-hyper-result-card--multiplier {
+  border-color: rgba(96, 165, 250, 0.58);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.24), transparent 44%),
+    linear-gradient(145deg, rgba(96, 165, 250, 0.16), rgba(249, 115, 22, 0.1));
+}
+
+.rtx-hyper-modal-actions {
+  margin: 0;
+  padding: 16px 20px 22px;
+}
+
+.rtx-hyper-action.btn-primary {
+  min-height: 48px;
+  border-radius: 16px;
+  color: #120804;
+  background: linear-gradient(180deg, #ffd08a, #ff7a18 62%, #d9480f);
+  box-shadow: 0 12px 28px rgba(249, 115, 22, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.rtx-hyper-action:disabled {
+  opacity: 0.8;
+}
+
+.rtx-hyper-modal--celebrate {
+  animation: rtx-hyper-polish-celebrate 1.15s ease-in-out infinite alternate;
+}
+
+@keyframes rtx-hyper-polish-celebrate {
+  from { filter: saturate(1); }
+  to { filter: saturate(1.18) brightness(1.04); }
+}
+
+@media (max-width: 560px) {
+  .rtx-hyper-modal-head {
+    padding: 20px 16px 8px;
+  }
+
+  .rtx-hyper-machine,
+  .rtx-hyper-prize-panel,
+  .rtx-hyper-result-card {
+    margin-left: 14px;
+    margin-right: 14px;
+  }
+
+  .rtx-hyper-prize-pool {
+    grid-template-columns: 1fr;
+  }
+
+  .rtx-hyper-slot {
+    min-height: 156px;
+  }
+
+  .rtx-hyper-modal-actions {
+    padding: 14px 14px 18px;
+  }
+}
