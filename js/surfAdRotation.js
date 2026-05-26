@@ -98,9 +98,9 @@
     }, 8000);
   }
 
-  const originalPatchSurfRuntimeUI = window.SurfEngine && window.SurfEngine.patchSurfRuntimeUI;
-  if (window.SurfEngine && typeof originalPatchSurfRuntimeUI === "function") {
-    window.SurfEngine.patchSurfRuntimeUI = function patchSurfRuntimeUIWithRotatingRails() {
+  if (typeof SurfEngine !== "undefined" && SurfEngine && typeof SurfEngine.patchSurfRuntimeUI === "function") {
+    const originalPatchSurfRuntimeUI = SurfEngine.patchSurfRuntimeUI;
+    SurfEngine.patchSurfRuntimeUI = function patchSurfRuntimeUIWithRotatingRails() {
       const result = originalPatchSurfRuntimeUI.apply(this, arguments);
       if (result) {
         refreshRotatingRails();
@@ -110,9 +110,9 @@
     };
   }
 
-  const originalSurfPageComponent = window.SurfPageComponent;
-  if (typeof originalSurfPageComponent === "function") {
-    window.SurfPageComponent = function SurfPageComponentWithRotatingRails() {
+  if (typeof SurfPageComponent === "function") {
+    const originalSurfPageComponent = SurfPageComponent;
+    SurfPageComponent = function SurfPageComponentWithRotatingRails() {
       const html = originalSurfPageComponent.apply(this, arguments);
       window.setTimeout(() => {
         refreshRotatingRails();
