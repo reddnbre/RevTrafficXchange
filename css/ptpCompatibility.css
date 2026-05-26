@@ -1,6 +1,11 @@
 /* PTP / manual traffic exchange compatibility layer.
    Keeps the promoted site large, visible, and traceable for strict PTP programs. */
 
+.surf-viewer-panel--frame-compatible,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible {
+  overflow: hidden;
+}
+
 .surf-viewer-panel--frame-compatible .surf-viewer-loyalty-hint {
   padding: 6px 10px 4px;
   font-size: 12px;
@@ -8,70 +13,82 @@
 }
 
 .surf-viewer-panel--frame-compatible .surf-viewer-with-rails,
-.surf-viewer-with-rails {
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-viewer-with-rails {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+  overflow: hidden;
 }
 
 .surf-viewer-panel--frame-compatible .surf-viewer-center,
-.surf-viewer-center {
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-viewer-center {
   order: -1;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .surf-viewer-panel--frame-compatible .surf-browser-frame,
-.surf-browser-frame {
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-frame {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 450px;
   height: clamp(520px, 72vh, 780px);
-}
-
-.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-frame,
-.app-shell.hyper-mode .surf-browser-frame {
   flex: 1 1 auto;
-  min-height: 450px;
 }
 
 .surf-viewer-panel--frame-compatible .surf-browser-content,
 .surf-viewer-panel--frame-compatible .surf-iframe,
-.surf-browser-content,
-.surf-iframe {
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-content,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-iframe {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: inherit;
 }
 
 .surf-viewer-panel--frame-compatible .surf-ad-rail,
-.surf-ad-rail {
-  width: min(100%, 968px);
-  max-width: 968px;
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 468px));
-  justify-content: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  justify-content: stretch;
   align-items: start;
+  overflow: hidden;
 }
 
 .surf-viewer-panel--frame-compatible .surf-rail-slot,
-.surf-rail-slot {
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-rail-slot {
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+}
+
+.surf-viewer-panel--frame-compatible .surf-rail-slot-title,
+.surf-viewer-panel--frame-compatible .surf-rail-slot-ph,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-rail-slot-title,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-rail-slot-ph {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 1023px) {
   .surf-viewer-panel--frame-compatible .surf-browser-frame,
-  .surf-browser-frame,
-  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-frame,
-  .app-shell.hyper-mode .surf-browser-frame {
+  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-browser-frame {
     min-height: 300px;
     height: clamp(300px, 62vh, 560px);
   }
 
   .surf-viewer-panel--frame-compatible .surf-ad-rail,
-  .surf-ad-rail {
-    grid-template-columns: minmax(0, 468px);
-  }
-}
-
-@media (min-width: 1024px) {
-  .surf-viewer-panel--frame-compatible .surf-browser-frame,
-  .surf-browser-frame {
-    min-width: min(100%, 1024px);
+  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
