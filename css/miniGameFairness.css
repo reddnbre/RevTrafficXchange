@@ -61,11 +61,27 @@
 }
 
 .mg-safe-needle {
-  height: 47%;
-  background: linear-gradient(180deg, #ffffff 0%, #93c5fd 42%, #f97316 100%);
+  width: 9px;
+  height: 48%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #dbeafe 24%, #60a5fa 50%, #f97316 100%);
   box-shadow:
-    0 0 12px rgba(147, 197, 253, 0.8),
-    0 0 18px rgba(249, 115, 22, 0.48);
+    0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 0 14px rgba(147, 197, 253, 0.86),
+    0 0 22px rgba(249, 115, 22, 0.58);
+}
+
+.mg-safe-needle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: #f97316;
+  box-shadow: 0 0 16px rgba(249, 115, 22, 0.92);
 }
 
 @media (max-width: 600px) {
@@ -77,5 +93,9 @@
 
   .mg-safe-zone::after {
     display: none;
+  }
+
+  .mg-safe-needle {
+    width: 10px;
   }
 }
