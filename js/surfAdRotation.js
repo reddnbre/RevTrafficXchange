@@ -64,29 +64,31 @@
 
   window.SurfRail_buildLeftColumnHtml = function SurfRail_buildRotatingTextHtml() {
     const picked = pickRotatingAd("text");
-    if (picked.ad) {
-      const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-      return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Rotating Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span><span class="surf-rail-slot-cta">Visit</span></button>`;
-    }
+    if (!picked.ad) return "";
 
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--placeholder surf-rail-slot--rotating panel" onclick="App.navigate('my-text-ads')"><span class="surf-rail-slot-meta">Rotating Text Ad</span><span class="surf-rail-slot-ph">Add your text ad to this rotation</span></button>`;
+    const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span><span class="surf-rail-slot-cta">Visit</span></button>`;
   };
 
   window.SurfRail_buildRightColumnHtml = function SurfRail_buildRotatingBannerHtml() {
     const picked = pickRotatingAd("banner");
-    if (picked.ad) {
-      const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-      return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Rotating Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
-    }
+    if (!picked.ad) return "";
 
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--placeholder surf-rail-slot--banner-ph surf-rail-slot--rotating panel" onclick="App.navigate('my-banner-ads')"><span class="surf-rail-slot-meta">Rotating Banner</span><span class="surf-rail-slot-ph">Add your banner to this rotation</span></button>`;
+    const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
   };
 
   function refreshRotatingRails() {
     const textRail = document.querySelector(".surf-ad-rail--left");
     const bannerRail = document.querySelector(".surf-ad-rail--right");
-    if (textRail) textRail.innerHTML = window.SurfRail_buildLeftColumnHtml();
-    if (bannerRail) bannerRail.innerHTML = window.SurfRail_buildRightColumnHtml();
+    if (textRail) {
+      textRail.innerHTML = window.SurfRail_buildLeftColumnHtml();
+      textRail.classList.toggle("surf-ad-rail--empty", !textRail.innerHTML.trim());
+    }
+    if (bannerRail) {
+      bannerRail.innerHTML = window.SurfRail_buildRightColumnHtml();
+      bannerRail.classList.toggle("surf-ad-rail--empty", !bannerRail.innerHTML.trim());
+    }
   }
 
   function ensureRotationTimer() {
