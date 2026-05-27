@@ -185,6 +185,25 @@
   text-transform: uppercase;
 }
 
+.surf-rail-slot--available {
+  border-style: dashed;
+  border-color: rgba(253, 186, 116, 0.58);
+  background:
+    linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(17, 17, 17, 0.72)),
+    rgba(8, 8, 8, 0.76);
+}
+
+.surf-rail-slot--available .surf-rail-slot-title {
+  color: #ffedd5;
+}
+
+.surf-generated-banner--available {
+  border: 1px dashed rgba(255, 237, 213, 0.46);
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.08) 0 8px, transparent 8px 16px),
+    linear-gradient(135deg, #7c2d12, #111827 58%, #1f2937);
+}
+
 @media (max-width: 760px) {
   .surf-viewer-panel--frame-compatible .surf-ad-rail,
   .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail {
