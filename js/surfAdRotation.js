@@ -2,7 +2,7 @@
   let rotationTick = 0;
   let rotationTimer = null;
 
-  function getAds(kind) {
+  function getMemberAds(kind) {
     if (typeof normalizeMemberCampaigns === "function") normalizeMemberCampaigns();
     const campaigns = RTXState.user && RTXState.user.memberCampaigns ? RTXState.user.memberCampaigns : {};
     const source = kind === "banner" ? campaigns.bannerAds : campaigns.textAds;
@@ -15,6 +15,31 @@
       if (typeof getAvailableCampaignViews !== "function") return true;
       return getAvailableCampaignViews(ad, inventoryType) > 0;
     });
+  }
+
+  function getSurfCampaignPromos(kind) {
+    const queue =
+      typeof SurfEngine !== "undefined" && SurfEngine && typeof SurfEngine.getCampaignQueue === "function"
+        ? SurfEngine.getCampaignQueue()
+        : RTXState.sampleCampaigns || [];
+    const campaigns = Array.isArray(queue) && queue.length ? queue : RTXState.sampleCampaigns || [];
+
+    return campaigns
+      .filter((campaign) => campaign && String(campaign.url || "").trim())
+      .map((campaign, index) => ({
+        id: `surf-promo-${kind}-${campaign.id || index}`,
+        title: campaign.title || "Traffic Exchange Sponsor",
+        description: "Featured in the live surf rotation",
+        targetUrl: campaign.url,
+        active: true,
+        isSurfPromo: true
+      }));
+  }
+
+  function getAds(kind) {
+    const memberAds = getMemberAds(kind);
+    if (memberAds.length) return memberAds;
+    return getSurfCampaignPromos(kind);
   }
 
   function escapeJs(value) {
@@ -47,7 +72,7 @@
   }
 
   window.SurfRail_clickRotatingTextAd = function SurfRail_clickRotatingTextAd(id, url) {
-    if (typeof TextAdsDisplayUI !== "undefined" && TextAdsDisplayUI && typeof TextAdsDisplayUI.clickAd === "function") {
+    if (!String(id || "").startsWith("surf-promo-") && typeof TextAdsDisplayUI !== "undefined" && TextAdsDisplayUI && typeof TextAdsDisplayUI.clickAd === "function") {
       TextAdsDisplayUI.clickAd(id, url);
       return;
     }
@@ -55,7 +80,7 @@
   };
 
   window.SurfRail_clickRotatingBannerAd = function SurfRail_clickRotatingBannerAd(id, url) {
-    if (typeof BannerAdsDisplayUI !== "undefined" && BannerAdsDisplayUI && typeof BannerAdsDisplayUI.clickBanner === "function") {
+    if (!String(id || "").startsWith("surf-promo-") && typeof BannerAdsDisplayUI !== "undefined" && BannerAdsDisplayUI && typeof BannerAdsDisplayUI.clickBanner === "function") {
       BannerAdsDisplayUI.clickBanner(id, url);
       return;
     }
@@ -67,7 +92,9 @@
     if (!picked.ad) return "";
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span><span class="surf-rail-slot-cta">Visit</span></button>`;
+    const meta = picked.ad.isSurfPromo ? "Surf Text" : "Text Ad";
+    const description = picked.ad.description ? `<span class="surf-rail-slot-desc">${escapeAttr(picked.ad.description)}</span>` : "";
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">${meta} <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
   };
 
   window.SurfRail_buildRightColumnHtml = function SurfRail_buildRotatingBannerHtml() {
@@ -75,6 +102,10 @@
     if (!picked.ad) return "";
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
+    if (picked.ad.isSurfPromo) {
+      return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating surf-rail-slot--generated-banner panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Surf Banner <b>${label}</b></span><span class="surf-generated-banner"><strong>${escapeAttr(picked.ad.title)}</strong><em>Traffic Exchange Sponsor</em></span></button>`;
+    }
+
     return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
   };
 
