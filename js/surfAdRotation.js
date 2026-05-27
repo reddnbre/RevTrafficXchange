@@ -2,44 +2,78 @@
   let rotationTick = 0;
   let rotationTimer = null;
 
-  function getMemberAds(kind) {
+  function getStorageUserRecords() {
+    const records = [];
+    const addRecord = (ownerId, data) => {
+      if (!data || typeof data !== "object") return;
+      records.push({ ownerId: String(ownerId || data.id || "member"), data });
+    };
+
+    addRecord(typeof getCurrentUserId === "function" ? getCurrentUserId() : RTXState.user && RTXState.user.id, RTXState.user);
+
+    try {
+      const prefix = typeof RTXUserPersist !== "undefined" && RTXUserPersist ? RTXUserPersist.keyPrefix : "rtx_user_state_v1";
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(`${prefix}:`)) continue;
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const data = JSON.parse(raw);
+        const ownerId = String(data && data.id ? data.id : key.slice(prefix.length + 1));
+        addRecord(ownerId, data);
+      }
+    } catch (e) {
+      /* localStorage may be unavailable; current user record still works. */
+    }
+
+    return records;
+  }
+
+  function hasRemaining(ad, usedKey) {
+    if (typeof getAvailableCampaignViews === "function") {
+      return getAvailableCampaignViews(ad, usedKey) > 0;
+    }
+    const allocated = Math.max(0, Number(ad && ad.allocatedViews) || 0);
+    if (!allocated) return true;
+    const used = Math.max(0, Number(ad && ad[usedKey]) || 0);
+    return used < allocated;
+  }
+
+  function getExchangeAds(kind) {
     if (typeof normalizeMemberCampaigns === "function") normalizeMemberCampaigns();
-    const campaigns = RTXState.user && RTXState.user.memberCampaigns ? RTXState.user.memberCampaigns : {};
-    const source = kind === "banner" ? campaigns.bannerAds : campaigns.textAds;
-    const inventoryType = kind === "banner" ? "impressions" : "views";
+    const usedKey = kind === "banner" ? "impressions" : "views";
+    const seen = new Set();
+    const ads = [];
 
-    return (Array.isArray(source) ? source : []).filter((ad) => {
-      if (!ad || !ad.active) return false;
-      if (!String(ad.targetUrl || "").trim()) return false;
-      if (kind === "banner" && !String(ad.imageUrl || "").trim()) return false;
-      if (typeof getAvailableCampaignViews !== "function") return true;
-      return getAvailableCampaignViews(ad, inventoryType) > 0;
+    getStorageUserRecords().forEach((record) => {
+      const campaigns = record.data && record.data.memberCampaigns ? record.data.memberCampaigns : {};
+      const source = kind === "banner" ? campaigns.bannerAds : campaigns.textAds;
+      (Array.isArray(source) ? source : []).forEach((ad, index) => {
+        if (!ad || !ad.active) return;
+        if (!String(ad.targetUrl || "").trim()) return;
+        if (kind === "banner" && !String(ad.imageUrl || "").trim()) return;
+        if (!hasRemaining(ad, usedKey)) return;
+
+        const id = String(ad.id || `${kind}-${index}`);
+        const ownerId = String(ad.ownerId || record.ownerId || "member");
+        const key = `${kind}:${ownerId}:${id}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+
+        ads.push({
+          ...ad,
+          id,
+          ownerId,
+          title: String(ad.title || (kind === "banner" ? "Member Banner" : "Member Text Ad")),
+          description: String(ad.description || "Member promotion in the surf exchange"),
+          targetUrl: String(ad.targetUrl || ""),
+          imageUrl: String(ad.imageUrl || ""),
+          isExchangeMemberAd: true
+        });
+      });
     });
-  }
 
-  function getSurfCampaignPromos(kind) {
-    const queue =
-      typeof SurfEngine !== "undefined" && SurfEngine && typeof SurfEngine.getCampaignQueue === "function"
-        ? SurfEngine.getCampaignQueue()
-        : RTXState.sampleCampaigns || [];
-    const campaigns = Array.isArray(queue) && queue.length ? queue : RTXState.sampleCampaigns || [];
-
-    return campaigns
-      .filter((campaign) => campaign && String(campaign.url || "").trim())
-      .map((campaign, index) => ({
-        id: `surf-promo-${kind}-${campaign.id || index}`,
-        title: campaign.title || "Traffic Exchange Sponsor",
-        description: "Featured in the live surf rotation",
-        targetUrl: campaign.url,
-        active: true,
-        isSurfPromo: true
-      }));
-  }
-
-  function getAds(kind) {
-    const memberAds = getMemberAds(kind);
-    if (memberAds.length) return memberAds;
-    return getSurfCampaignPromos(kind);
+    return ads;
   }
 
   function escapeJs(value) {
@@ -56,7 +90,7 @@
   }
 
   function pickRotatingAd(kind) {
-    const ads = getAds(kind);
+    const ads = getExchangeAds(kind);
     if (!ads.length) return { ad: null, count: 0, index: 0 };
     const active = Math.max(0, Number(RTXState.activeCampaignIndex) || 0);
     const views = Math.max(0, Number(RTXState.user && RTXState.user.viewsToday) || 0);
@@ -72,7 +106,7 @@
   }
 
   window.SurfRail_clickRotatingTextAd = function SurfRail_clickRotatingTextAd(id, url) {
-    if (!String(id || "").startsWith("surf-promo-") && typeof TextAdsDisplayUI !== "undefined" && TextAdsDisplayUI && typeof TextAdsDisplayUI.clickAd === "function") {
+    if (typeof TextAdsDisplayUI !== "undefined" && TextAdsDisplayUI && typeof TextAdsDisplayUI.clickAd === "function") {
       TextAdsDisplayUI.clickAd(id, url);
       return;
     }
@@ -80,7 +114,7 @@
   };
 
   window.SurfRail_clickRotatingBannerAd = function SurfRail_clickRotatingBannerAd(id, url) {
-    if (!String(id || "").startsWith("surf-promo-") && typeof BannerAdsDisplayUI !== "undefined" && BannerAdsDisplayUI && typeof BannerAdsDisplayUI.clickBanner === "function") {
+    if (typeof BannerAdsDisplayUI !== "undefined" && BannerAdsDisplayUI && typeof BannerAdsDisplayUI.clickBanner === "function") {
       BannerAdsDisplayUI.clickBanner(id, url);
       return;
     }
@@ -89,23 +123,22 @@
 
   window.SurfRail_buildLeftColumnHtml = function SurfRail_buildRotatingTextHtml() {
     const picked = pickRotatingAd("text");
-    if (!picked.ad) return "";
+    if (!picked.ad) {
+      return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating surf-rail-slot--available panel" onclick="App.navigate('my-text-ads')"><span class="surf-rail-slot-meta">Text Slot <b>Available</b></span><span class="surf-rail-slot-title">Advertise here</span><span class="surf-rail-slot-desc">Your text ad can rotate through surf views.</span></button>`;
+    }
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-    const meta = picked.ad.isSurfPromo ? "Surf Text" : "Text Ad";
     const description = picked.ad.description ? `<span class="surf-rail-slot-desc">${escapeAttr(picked.ad.description)}</span>` : "";
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">${meta} <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
   };
 
   window.SurfRail_buildRightColumnHtml = function SurfRail_buildRotatingBannerHtml() {
     const picked = pickRotatingAd("banner");
-    if (!picked.ad) return "";
-
-    const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-    if (picked.ad.isSurfPromo) {
-      return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating surf-rail-slot--generated-banner panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Surf Banner <b>${label}</b></span><span class="surf-generated-banner"><strong>${escapeAttr(picked.ad.title)}</strong><em>Traffic Exchange Sponsor</em></span></button>`;
+    if (!picked.ad) {
+      return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating surf-rail-slot--available panel" onclick="App.navigate('my-banner-ads')"><span class="surf-rail-slot-meta">Banner Slot <b>Available</b></span><span class="surf-generated-banner surf-generated-banner--available"><strong>Advertise Here</strong><em>Member banner rotation</em></span></button>`;
     }
 
+    const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
     return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
   };
 
@@ -114,11 +147,11 @@
     const bannerRail = document.querySelector(".surf-ad-rail--right");
     if (textRail) {
       textRail.innerHTML = window.SurfRail_buildLeftColumnHtml();
-      textRail.classList.toggle("surf-ad-rail--empty", !textRail.innerHTML.trim());
+      textRail.classList.remove("surf-ad-rail--empty");
     }
     if (bannerRail) {
       bannerRail.innerHTML = window.SurfRail_buildRightColumnHtml();
-      bannerRail.classList.toggle("surf-ad-rail--empty", !bannerRail.innerHTML.trim());
+      bannerRail.classList.remove("surf-ad-rail--empty");
     }
   }
 
