@@ -1,20 +1,60 @@
-/* Surf companion ads rotate with the surf experience instead of acting as static page placements. */
+/* Surf companion ads rotate inside the surf viewer instead of taking layout space. */
+
+.surf-viewer-panel--frame-compatible .surf-viewer-with-rails,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-viewer-with-rails {
+  position: relative;
+  display: block;
+}
+
+.surf-viewer-panel--frame-compatible .surf-viewer-center,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-viewer-center {
+  position: relative;
+  z-index: 1;
+}
 
 .surf-viewer-panel--frame-compatible .surf-ad-rail,
 .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail {
-  grid-template-columns: minmax(0, 1fr);
+  position: absolute;
+  z-index: 4;
+  width: auto;
+  max-width: min(468px, calc(100% - 24px));
+  min-width: 0;
+  display: flex;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.surf-viewer-panel--frame-compatible .surf-ad-rail--left,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail--left {
+  left: 12px;
+  top: 12px;
+}
+
+.surf-viewer-panel--frame-compatible .surf-ad-rail--right,
+.app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail--right {
+  right: 12px;
+  bottom: 12px;
+}
+
+.surf-ad-rail--empty {
+  display: none !important;
 }
 
 .surf-rail-slot--rotating {
   position: relative;
-  width: 100%;
-  min-height: 72px;
+  width: min(468px, calc(100vw - 40px));
+  min-height: 42px;
   height: auto;
-  border: 1px solid rgba(249, 115, 22, 0.28);
+  border: 1px solid rgba(249, 115, 22, 0.42);
+  border-radius: 12px;
   background:
-    linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(255, 255, 255, 0.035) 42%, rgba(96, 165, 250, 0.08)),
-    rgba(8, 8, 8, 0.86);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+    linear-gradient(135deg, rgba(17, 17, 17, 0.88), rgba(17, 17, 17, 0.7)),
+    rgba(8, 8, 8, 0.78);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(249, 115, 22, 0.12);
+  backdrop-filter: blur(8px) saturate(1.1);
+  pointer-events: auto;
 }
 
 .surf-rail-slot--rotating::before {
@@ -23,16 +63,16 @@
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  opacity: 0.6;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.09), transparent);
+  opacity: 0.48;
 }
 
 .surf-rail-slot--rotating:hover,
 .surf-rail-slot--rotating:focus-visible {
-  border-color: rgba(249, 115, 22, 0.62);
+  border-color: rgba(249, 115, 22, 0.72);
   box-shadow:
-    0 16px 34px rgba(0, 0, 0, 0.32),
-    0 0 24px rgba(249, 115, 22, 0.16);
+    0 16px 34px rgba(0, 0, 0, 0.34),
+    0 0 24px rgba(249, 115, 22, 0.2);
 }
 
 .surf-rail-slot-meta {
@@ -42,12 +82,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 7px;
+  padding: 3px 7px;
   border-radius: 999px;
-  border: 1px solid rgba(249, 115, 22, 0.24);
-  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.28);
+  background: rgba(249, 115, 22, 0.14);
   color: #fdba74;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 900;
   white-space: nowrap;
   text-transform: uppercase;
@@ -59,7 +99,6 @@
 }
 
 .surf-rail-slot--rotating .surf-rail-slot-title,
-.surf-rail-slot--rotating .surf-rail-slot-ph,
 .surf-rail-slot--rotating .surf-rail-slot-cta,
 .surf-rail-slot--rotating .surf-rail-slot-img {
   position: relative;
@@ -67,12 +106,12 @@
 }
 
 .surf-rail-slot--rotating .surf-rail-slot-title {
-  font-size: 14px;
+  font-size: 13px;
   color: #f7f7f7;
 }
 
 .surf-rail-slot--rotating .surf-rail-slot-cta {
-  padding: 5px 9px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: #f97316;
   color: #0b0502;
@@ -80,8 +119,8 @@
 
 .surf-rail-slot--banner.surf-rail-slot--rotating {
   justify-content: flex-start;
-  min-height: 84px;
-  padding: 8px 10px;
+  min-height: 68px;
+  padding: 5px 8px;
 }
 
 .surf-rail-slot--banner.surf-rail-slot--rotating .surf-rail-slot-img {
@@ -89,22 +128,33 @@
   width: 100%;
   max-width: none;
   min-width: 0;
-  height: 60px;
+  height: 52px;
   object-fit: contain;
   object-position: center;
 }
 
-.surf-rail-slot--placeholder.surf-rail-slot--rotating {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-}
-
 @media (max-width: 760px) {
+  .surf-viewer-panel--frame-compatible .surf-ad-rail,
+  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail {
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+  }
+
+  .surf-viewer-panel--frame-compatible .surf-ad-rail--left,
+  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail--left {
+    top: 10px;
+  }
+
+  .surf-viewer-panel--frame-compatible .surf-ad-rail--right,
+  .app-shell.hyper-mode .surf-viewer-panel--frame-compatible .surf-ad-rail--right {
+    bottom: 10px;
+  }
+
   .surf-rail-slot--rotating,
   .surf-rail-slot--banner.surf-rail-slot--rotating {
-    min-height: 78px;
+    width: 100%;
+    min-height: 46px;
     flex-wrap: wrap;
     justify-content: center;
     text-align: center;
@@ -112,7 +162,7 @@
 
   .surf-rail-slot--banner.surf-rail-slot--rotating .surf-rail-slot-img {
     flex-basis: 100%;
-    height: 50px;
+    height: 44px;
   }
 
   .surf-rail-slot--rotating .surf-rail-slot-cta {
