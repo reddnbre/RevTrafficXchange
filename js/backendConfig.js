@@ -1,10 +1,7 @@
 // RevTrafficXchange backend switch.
-// Set enabled to true after deploying the Cloudflare Worker API.
-// If the Worker is routed on the same domain, leave baseUrl as "".
-// If the Worker uses workers.dev, set baseUrl to that full origin, for example:
-// https://revtrafficxchange-api.yourname.workers.dev
+// The Worker API stores shared member state and shared surf ad rotation data.
 window.RTX_BACKEND_CONFIG = window.RTX_BACKEND_CONFIG || {
-  enabled: false,
-  baseUrl: "",
+  enabled: true,
+  baseUrl: "https://revtrafficxchange-api.reddnbre.workers.dev",
   tokenStorageKey: "rtx_api_token_v1"
 };
