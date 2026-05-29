@@ -91,6 +91,14 @@ async function parseJson(req) {
   }
 }
 
+function safeParseJson(raw, fallback) {
+  try {
+    return JSON.parse(raw || "");
+  } catch (e) {
+    return fallback;
+  }
+}
+
 function tokenFromAuth(req) {
   const auth = String(req.headers.get("Authorization") || "");
   if (!auth.toLowerCase().startsWith("bearer ")) return "";
@@ -172,14 +180,16 @@ async function handleLogin(req, env) {
 
   const now = nowIso();
   const userId = `user_${email}`;
+  const initialState = body && body.initialState && typeof body.initialState === "object" ? body.initialState : {};
+  const initialStateJson = JSON.stringify(Object.assign({}, initialState, { id: userId, username: username || initialState.username || "" }));
   await env.DB.prepare(
     `INSERT INTO users (id, email, username, state_json, created_at, updated_at)
-     VALUES (?, ?, ?, '{}', ?, ?)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(email) DO UPDATE SET
        username = CASE WHEN excluded.username = '' THEN users.username ELSE excluded.username END,
        updated_at = excluded.updated_at`
   )
-    .bind(userId, email, username, now, now)
+    .bind(userId, email, username, initialStateJson, now, now)
     .run();
 
   const user = await env.DB.prepare("SELECT id, email, username, state_json FROM users WHERE email = ?").bind(email).first();
@@ -188,12 +198,7 @@ async function handleLogin(req, env) {
     .bind(token, user.id, now, plusDaysIso(30))
     .run();
 
-  let state = {};
-  try {
-    state = user.state_json ? JSON.parse(user.state_json) : {};
-  } catch (e) {
-    state = {};
-  }
+  const state = safeParseJson(user.state_json, {});
   return json({ token, user: { id: user.id, email: user.email, username: user.username || "" }, state });
 }
 
@@ -202,12 +207,7 @@ async function handleMe(req, env) {
   const user = await getSessionUser(env, token);
   if (!user) return json({ error: "Unauthorized" }, { status: 401 });
 
-  let state = {};
-  try {
-    state = user.state_json ? JSON.parse(user.state_json) : {};
-  } catch (e) {
-    state = {};
-  }
+  const state = safeParseJson(user.state_json, {});
   return json({ user: { id: user.id, email: user.email, username: user.username || "" }, state });
 }
 
@@ -218,6 +218,7 @@ async function handleStateSave(req, env) {
 
   const body = await parseJson(req);
   const state = body && body.state && typeof body.state === "object" ? body.state : {};
+  state.id = user.id;
   await env.DB.prepare("UPDATE users SET state_json = ?, updated_at = ? WHERE id = ?")
     .bind(JSON.stringify(state), nowIso(), user.id)
     .run();
@@ -230,6 +231,93 @@ async function handleLogout(req, env) {
     await env.DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run();
   }
   return json({ ok: true });
+}
+
+function publicAdFromState(user, kind, ad, index) {
+  if (!ad || !ad.active || !String(ad.targetUrl || "").trim()) return null;
+  if (kind === "banner" && !String(ad.imageUrl || "").trim()) return null;
+  const allocated = Math.max(0, Number(ad.allocatedViews) || 0);
+  const used = Math.max(0, Number(ad[kind === "banner" ? "impressions" : "views"]) || 0);
+  if (allocated && used >= allocated) return null;
+  return {
+    id: String(ad.id || `${kind}-${index}`),
+    ownerId: String(ad.ownerId || user.id),
+    kind,
+    title: String(ad.title || (kind === "banner" ? "Member Banner" : "Member Text Ad")),
+    description: String(ad.description || "Member promotion in the surf exchange"),
+    targetUrl: String(ad.targetUrl || ""),
+    imageUrl: String(ad.imageUrl || ""),
+    remainingViews: allocated ? Math.max(0, allocated - used) : null,
+    isRemoteExchangeAd: true
+  };
+}
+
+async function handleExchangeAds(env) {
+  const rows = await env.DB.prepare("SELECT id, state_json FROM users ORDER BY updated_at DESC LIMIT 500").all();
+  const textAds = [];
+  const bannerAds = [];
+  (rows.results || []).forEach((user) => {
+    const state = safeParseJson(user.state_json, {});
+    const campaigns = state && state.memberCampaigns ? state.memberCampaigns : {};
+    (Array.isArray(campaigns.textAds) ? campaigns.textAds : []).forEach((ad, index) => {
+      const item = publicAdFromState(user, "text", ad, index);
+      if (item) textAds.push(item);
+    });
+    (Array.isArray(campaigns.bannerAds) ? campaigns.bannerAds : []).forEach((ad, index) => {
+      const item = publicAdFromState(user, "banner", ad, index);
+      if (item) bannerAds.push(item);
+    });
+  });
+  return json({ textAds, bannerAds, generatedAt: nowIso() });
+}
+
+function applyExchangeAdEvent(state, kind, adId) {
+  const campaigns = state && state.memberCampaigns ? state.memberCampaigns : null;
+  if (!campaigns) return { state, changed: false };
+  const key = kind === "banner" ? "bannerAds" : "textAds";
+  const usedKey = kind === "banner" ? "impressions" : "views";
+  const source = Array.isArray(campaigns[key]) ? campaigns[key] : [];
+  let changed = false;
+  campaigns[key] = source.map((ad, index) => {
+    const currentId = String(ad && ad.id ? ad.id : `${kind}-${index}`);
+    if (currentId !== String(adId)) return ad;
+    changed = true;
+    return {
+      ...ad,
+      clicks: Math.max(0, Number(ad.clicks) || 0) + 1,
+      [usedKey]: Math.max(0, Number(ad[usedKey]) || 0) + 1
+    };
+  });
+  state.memberCampaigns = campaigns;
+  return { state, changed };
+}
+
+async function handleExchangeAdEvent(req, env) {
+  const token = tokenFromAuth(req);
+  const viewer = await getSessionUser(env, token);
+  const body = await parseJson(req);
+  const kind = body.kind === "banner" ? "banner" : "text";
+  const ownerId = String(body.ownerId || "").trim();
+  const adId = String(body.adId || "").trim();
+  const eventType = body.eventType === "impression" ? "impression" : "click";
+  if (!ownerId || !adId) return json({ error: "Missing ad reference" }, { status: 400 });
+
+  const owner = await env.DB.prepare("SELECT id, state_json FROM users WHERE id = ?").bind(ownerId).first();
+  if (!owner) return json({ error: "Ad owner not found" }, { status: 404 });
+
+  const state = safeParseJson(owner.state_json, {});
+  const applied = applyExchangeAdEvent(state, kind, adId);
+  if (applied.changed) {
+    await env.DB.prepare("UPDATE users SET state_json = ?, updated_at = ? WHERE id = ?")
+      .bind(JSON.stringify(applied.state), nowIso(), owner.id)
+      .run();
+  }
+  await env.DB.prepare(
+    "INSERT INTO ad_events (ad_kind, owner_id, ad_id, event_type, viewer_id, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  )
+    .bind(kind, ownerId, adId, eventType, viewer ? viewer.id : null, nowIso())
+    .run();
+  return json({ ok: true, counted: applied.changed });
 }
 
 async function fetchStripeJson(env, path, paramsObj) {
@@ -333,12 +421,7 @@ async function applyFulfillmentForCheckoutSession(env, checkoutSession) {
   const user = await env.DB.prepare("SELECT id, state_json FROM users WHERE id = ?").bind(userId).first();
   if (!user) return;
 
-  let state = {};
-  try {
-    state = user.state_json ? JSON.parse(user.state_json) : {};
-  } catch (e) {
-    state = {};
-  }
+  const state = safeParseJson(user.state_json, {});
 
   if (purchaseType === "credits" && creditsAmount > 0) {
     state.credits = Math.max(0, Number(state.credits) || 0) + creditsAmount;
@@ -409,7 +492,7 @@ export default {
     const url = new URL(req.url);
     let res;
 
-    if (req.method === "GET" && url.pathname === "/health") {
+    if (req.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) {
       res = json({ ok: true, service: "revtrafficxchange-api" });
       return withCors(req, res);
     }
@@ -421,12 +504,20 @@ export default {
       res = await handleLogout(req, env);
       return withCors(req, res);
     }
-    if (req.method === "GET" && url.pathname === "/api/me") {
+    if (req.method === "GET" && (url.pathname === "/api/me" || url.pathname === "/api/me/state")) {
       res = await handleMe(req, env);
       return withCors(req, res);
     }
     if (req.method === "PUT" && url.pathname === "/api/me/state") {
       res = await handleStateSave(req, env);
+      return withCors(req, res);
+    }
+    if (req.method === "GET" && url.pathname === "/api/exchange/ads") {
+      res = await handleExchangeAds(env);
+      return withCors(req, res);
+    }
+    if (req.method === "POST" && url.pathname === "/api/exchange/ad-event") {
+      res = await handleExchangeAdEvent(req, env);
       return withCors(req, res);
     }
     if (req.method === "POST" && url.pathname === "/api/payments/checkout") {
