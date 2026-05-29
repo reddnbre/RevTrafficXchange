@@ -1,6 +1,7 @@
 (function () {
   let rotationTick = 0;
   let rotationTimer = null;
+  let remoteAdsCache = { textAds: [], bannerAds: [], fetchedAt: 0, loading: false };
 
   function getStoragePrefix() {
     return typeof RTXUserPersist !== "undefined" && RTXUserPersist ? RTXUserPersist.keyPrefix : "rtx_user_state_v1";
@@ -9,6 +10,15 @@
   function getCurrentRecordOwnerId() {
     return String(
       typeof getCurrentUserId === "function" ? getCurrentUserId() : RTXState.user && RTXState.user.id ? RTXState.user.id : "member"
+    );
+  }
+
+  function backendReady() {
+    return Boolean(
+      typeof RTXBackendClient !== "undefined" &&
+        RTXBackendClient &&
+        typeof RTXBackendClient.isEnabled === "function" &&
+        RTXBackendClient.isEnabled()
     );
   }
 
@@ -49,11 +59,35 @@
     return used < allocated;
   }
 
+  function normalizeRemoteAd(kind, ad, index) {
+    if (!ad || typeof ad !== "object") return null;
+    if (!String(ad.targetUrl || "").trim()) return null;
+    if (kind === "banner" && !String(ad.imageUrl || "").trim()) return null;
+    return {
+      ...ad,
+      id: String(ad.id || `remote-${kind}-${index}`),
+      ownerId: String(ad.ownerId || "remote"),
+      title: String(ad.title || (kind === "banner" ? "Member Banner" : "Member Text Ad")),
+      description: String(ad.description || "Member promotion in the surf exchange"),
+      targetUrl: String(ad.targetUrl || ""),
+      imageUrl: String(ad.imageUrl || ""),
+      isRemoteExchangeAd: true
+    };
+  }
+
   function getExchangeAds(kind) {
     if (typeof normalizeMemberCampaigns === "function") normalizeMemberCampaigns();
     const usedKey = kind === "banner" ? "impressions" : "views";
     const seen = new Set();
     const ads = [];
+
+    const addAd = (ad) => {
+      if (!ad) return;
+      const key = `${kind}:${String(ad.ownerId || "member")}:${String(ad.id || "")}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      ads.push(ad);
+    };
 
     getStorageUserRecords().forEach((record) => {
       const campaigns = record.data && record.data.memberCampaigns ? record.data.memberCampaigns : {};
@@ -66,11 +100,7 @@
 
         const id = String(ad.id || `${kind}-${index}`);
         const ownerId = String(ad.ownerId || record.ownerId || "member");
-        const key = `${kind}:${ownerId}:${id}`;
-        if (seen.has(key)) return;
-        seen.add(key);
-
-        ads.push({
+        addAd({
           ...ad,
           id,
           ownerId,
@@ -82,6 +112,9 @@
         });
       });
     });
+
+    const remoteSource = kind === "banner" ? remoteAdsCache.bannerAds : remoteAdsCache.textAds;
+    (Array.isArray(remoteSource) ? remoteSource : []).forEach((ad, index) => addAd(normalizeRemoteAd(kind, ad, index)));
 
     return ads;
   }
@@ -107,6 +140,25 @@
     const offset = kind === "banner" ? 1 : 0;
     const index = (active + views + rotationTick + offset) % ads.length;
     return { ad: ads[index], count: ads.length, index };
+  }
+
+  async function refreshRemoteAds(force) {
+    if (!backendReady() || typeof RTXBackendClient.getExchangeAds !== "function") return;
+    const now = Date.now();
+    if (!force && (remoteAdsCache.loading || now - remoteAdsCache.fetchedAt < 30000)) return;
+    remoteAdsCache.loading = true;
+    try {
+      const data = await RTXBackendClient.getExchangeAds();
+      remoteAdsCache = {
+        textAds: Array.isArray(data && data.textAds) ? data.textAds : [],
+        bannerAds: Array.isArray(data && data.bannerAds) ? data.bannerAds : [],
+        fetchedAt: Date.now(),
+        loading: false
+      };
+      refreshRotatingRails(false);
+    } catch (e) {
+      remoteAdsCache.loading = false;
+    }
   }
 
   function findRotatingAdRecord(kind, ownerId, id) {
@@ -150,6 +202,18 @@
     }
   }
 
+  function trackBackendAdEvent(kind, id, ownerId) {
+    if (!backendReady() || typeof RTXBackendClient.trackExchangeAdEvent !== "function") return;
+    RTXBackendClient.trackExchangeAdEvent({
+      kind,
+      adId: id,
+      ownerId,
+      eventType: "click"
+    })
+      .then(() => refreshRemoteAds(true))
+      .catch(() => {});
+  }
+
   function openAndTrackRotatingAd(kind, id, ownerId, url) {
     const target = String(url || "").trim();
     if (!target) return;
@@ -170,9 +234,10 @@
       match.campaigns[match.sourceKey] = match.source;
       match.record.data.memberCampaigns = match.campaigns;
       persistRotatingAdRecord(match);
-      refreshRotatingRails();
+      refreshRotatingRails(false);
     }
 
+    trackBackendAdEvent(kind, id, ownerId);
     window.open(target, "_blank", "noopener,noreferrer");
   }
 
@@ -184,10 +249,6 @@
     openAndTrackRotatingAd("banner", id, ownerId, url);
   };
 
-  function fallbackNavigate(view) {
-    if (typeof App !== "undefined" && App && typeof App.navigate === "function") App.navigate(view);
-  }
-
   window.SurfRail_buildLeftColumnHtml = function SurfRail_buildRotatingTextHtml() {
     const picked = pickRotatingAd("text");
     if (!picked.ad) {
@@ -195,8 +256,9 @@
     }
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
+    const sourceLabel = picked.ad.isRemoteExchangeAd ? "Exchange Text" : "Text Ad";
     const description = picked.ad.description ? `<span class="surf-rail-slot-desc">${escapeAttr(picked.ad.description)}</span>` : "";
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.ownerId)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.ownerId)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">${sourceLabel} <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
   };
 
   window.SurfRail_buildRightColumnHtml = function SurfRail_buildRotatingBannerHtml() {
@@ -206,10 +268,12 @@
     }
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.ownerId)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
+    const sourceLabel = picked.ad.isRemoteExchangeAd ? "Exchange Banner" : "Banner";
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.ownerId)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">${sourceLabel} <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
   };
 
-  function refreshRotatingRails() {
+  function refreshRotatingRails(shouldFetchRemote) {
+    if (shouldFetchRemote !== false) refreshRemoteAds(false);
     const textRail = document.querySelector(".surf-ad-rail--left");
     const bannerRail = document.querySelector(".surf-ad-rail--right");
     if (textRail) {
@@ -227,7 +291,7 @@
     rotationTimer = window.setInterval(() => {
       if (RTXState.currentView !== "surf") return;
       rotationTick += 1;
-      refreshRotatingRails();
+      refreshRotatingRails(true);
     }, 8000);
   }
 
@@ -236,7 +300,7 @@
     SurfEngine.patchSurfRuntimeUI = function patchSurfRuntimeUIWithRotatingRails() {
       const result = originalPatchSurfRuntimeUI.apply(this, arguments);
       if (result) {
-        refreshRotatingRails();
+        refreshRotatingRails(true);
         ensureRotationTimer();
       }
       return result;
@@ -248,7 +312,7 @@
     SurfPageComponent = function SurfPageComponentWithRotatingRails() {
       const html = originalSurfPageComponent.apply(this, arguments);
       window.setTimeout(() => {
-        refreshRotatingRails();
+        refreshRotatingRails(true);
         ensureRotationTimer();
       }, 0);
       return html;
