@@ -42,3 +42,16 @@ CREATE TABLE IF NOT EXISTS stripe_events (
   event_type TEXT NOT NULL,
   processed_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS ad_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ad_kind TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
+  ad_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  viewer_id TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ad_events_ad ON ad_events(owner_id, ad_kind, ad_id);
+CREATE INDEX IF NOT EXISTS idx_ad_events_created_at ON ad_events(created_at);
