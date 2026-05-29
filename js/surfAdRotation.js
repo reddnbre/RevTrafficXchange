@@ -2,17 +2,27 @@
   let rotationTick = 0;
   let rotationTimer = null;
 
+  function getStoragePrefix() {
+    return typeof RTXUserPersist !== "undefined" && RTXUserPersist ? RTXUserPersist.keyPrefix : "rtx_user_state_v1";
+  }
+
+  function getCurrentRecordOwnerId() {
+    return String(
+      typeof getCurrentUserId === "function" ? getCurrentUserId() : RTXState.user && RTXState.user.id ? RTXState.user.id : "member"
+    );
+  }
+
   function getStorageUserRecords() {
     const records = [];
-    const addRecord = (ownerId, data) => {
+    const addRecord = (ownerId, data, storageKey) => {
       if (!data || typeof data !== "object") return;
-      records.push({ ownerId: String(ownerId || data.id || "member"), data });
+      records.push({ ownerId: String(ownerId || data.id || "member"), data, storageKey: storageKey || "" });
     };
 
-    addRecord(typeof getCurrentUserId === "function" ? getCurrentUserId() : RTXState.user && RTXState.user.id, RTXState.user);
+    addRecord(getCurrentRecordOwnerId(), RTXState.user, "");
 
     try {
-      const prefix = typeof RTXUserPersist !== "undefined" && RTXUserPersist ? RTXUserPersist.keyPrefix : "rtx_user_state_v1";
+      const prefix = getStoragePrefix();
       for (let i = 0; i < localStorage.length; i += 1) {
         const key = localStorage.key(i);
         if (!key || !key.startsWith(`${prefix}:`)) continue;
@@ -20,7 +30,7 @@
         if (!raw) continue;
         const data = JSON.parse(raw);
         const ownerId = String(data && data.id ? data.id : key.slice(prefix.length + 1));
-        addRecord(ownerId, data);
+        addRecord(ownerId, data, key);
       }
     } catch (e) {
       /* localStorage may be unavailable; current user record still works. */
@@ -99,27 +109,84 @@
     return { ad: ads[index], count: ads.length, index };
   }
 
-  function fallbackClick(url) {
+  function findRotatingAdRecord(kind, ownerId, id) {
+    const sourceKey = kind === "banner" ? "bannerAds" : "textAds";
+    const owner = String(ownerId || "");
+    const adId = String(id || "");
+    const records = getStorageUserRecords();
+
+    for (let r = 0; r < records.length; r += 1) {
+      const record = records[r];
+      const campaigns = record.data && record.data.memberCampaigns ? record.data.memberCampaigns : {};
+      const source = Array.isArray(campaigns[sourceKey]) ? campaigns[sourceKey] : [];
+      for (let i = 0; i < source.length; i += 1) {
+        const ad = source[i];
+        const currentId = String(ad && ad.id ? ad.id : `${kind}-${i}`);
+        const currentOwner = String(ad && ad.ownerId ? ad.ownerId : record.ownerId || "member");
+        if (currentId === adId && (!owner || currentOwner === owner || String(record.ownerId) === owner)) {
+          return { record, campaigns, source, sourceKey, index: i, ad };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function persistRotatingAdRecord(match) {
+    if (!match || !match.record || !match.record.data) return;
+    const currentOwnerId = getCurrentRecordOwnerId();
+    if (match.record.data === RTXState.user || String(match.record.ownerId) === currentOwnerId) {
+      if (typeof RTXUserPersist !== "undefined" && RTXUserPersist && typeof RTXUserPersist.save === "function") {
+        RTXUserPersist.save();
+      }
+      return;
+    }
+
+    try {
+      const key = match.record.storageKey || `${getStoragePrefix()}:${match.record.ownerId}`;
+      localStorage.setItem(key, JSON.stringify(match.record.data));
+    } catch (e) {
+      /* If storage is blocked, still let the click open. */
+    }
+  }
+
+  function openAndTrackRotatingAd(kind, id, ownerId, url) {
     const target = String(url || "").trim();
     if (!target) return;
+    const usedKey = kind === "banner" ? "impressions" : "views";
+    const match = findRotatingAdRecord(kind, ownerId, id);
+
+    if (match && match.ad && hasRemaining(match.ad, usedKey)) {
+      const nextAd = {
+        ...match.ad,
+        clicks: Math.max(0, Number(match.ad.clicks) || 0) + 1
+      };
+      if (kind === "banner") {
+        nextAd.impressions = Math.max(0, Number(match.ad.impressions) || 0) + 1;
+      } else {
+        nextAd.views = Math.max(0, Number(match.ad.views) || 0) + 1;
+      }
+      match.source[match.index] = nextAd;
+      match.campaigns[match.sourceKey] = match.source;
+      match.record.data.memberCampaigns = match.campaigns;
+      persistRotatingAdRecord(match);
+      refreshRotatingRails();
+    }
+
     window.open(target, "_blank", "noopener,noreferrer");
   }
 
-  window.SurfRail_clickRotatingTextAd = function SurfRail_clickRotatingTextAd(id, url) {
-    if (typeof TextAdsDisplayUI !== "undefined" && TextAdsDisplayUI && typeof TextAdsDisplayUI.clickAd === "function") {
-      TextAdsDisplayUI.clickAd(id, url);
-      return;
-    }
-    fallbackClick(url);
+  window.SurfRail_clickRotatingTextAd = function SurfRail_clickRotatingTextAd(id, ownerId, url) {
+    openAndTrackRotatingAd("text", id, ownerId, url);
   };
 
-  window.SurfRail_clickRotatingBannerAd = function SurfRail_clickRotatingBannerAd(id, url) {
-    if (typeof BannerAdsDisplayUI !== "undefined" && BannerAdsDisplayUI && typeof BannerAdsDisplayUI.clickBanner === "function") {
-      BannerAdsDisplayUI.clickBanner(id, url);
-      return;
-    }
-    fallbackClick(url);
+  window.SurfRail_clickRotatingBannerAd = function SurfRail_clickRotatingBannerAd(id, ownerId, url) {
+    openAndTrackRotatingAd("banner", id, ownerId, url);
   };
+
+  function fallbackNavigate(view) {
+    if (typeof App !== "undefined" && App && typeof App.navigate === "function") App.navigate(view);
+  }
 
   window.SurfRail_buildLeftColumnHtml = function SurfRail_buildRotatingTextHtml() {
     const picked = pickRotatingAd("text");
@@ -129,7 +196,7 @@
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
     const description = picked.ad.description ? `<span class="surf-rail-slot-desc">${escapeAttr(picked.ad.description)}</span>` : "";
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--text surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingTextAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.ownerId)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Text Ad <b>${label}</b></span><span class="surf-rail-slot-title" title="${escapeAttr(picked.ad.title)}">${escapeAttr(picked.ad.title)}</span>${description}<span class="surf-rail-slot-cta">Visit</span></button>`;
   };
 
   window.SurfRail_buildRightColumnHtml = function SurfRail_buildRotatingBannerHtml() {
@@ -139,7 +206,7 @@
     }
 
     const label = picked.count > 1 ? `${picked.index + 1} / ${picked.count}` : "Live";
-    return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
+    return `<button type="button" class="surf-rail-slot surf-rail-slot--banner surf-rail-slot--rotating panel" onclick="SurfRail_clickRotatingBannerAd('${escapeJs(picked.ad.id)}','${escapeJs(picked.ad.ownerId)}','${escapeJs(picked.ad.targetUrl)}')"><span class="surf-rail-slot-meta">Banner <b>${label}</b></span><img class="surf-rail-slot-img" src="${escapeAttr(picked.ad.imageUrl)}" alt="" loading="lazy" /></button>`;
   };
 
   function refreshRotatingRails() {
