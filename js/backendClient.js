@@ -1,5 +1,6 @@
 const RTXBackendClient = {
   config: {
+    enabled: false,
     baseUrl: "",
     tokenStorageKey: "rtx_api_token_v1"
   },
@@ -9,6 +10,7 @@ const RTXBackendClient = {
       typeof window !== "undefined" && window.RTX_BACKEND_CONFIG && typeof window.RTX_BACKEND_CONFIG === "object"
         ? window.RTX_BACKEND_CONFIG
         : {};
+    this.config.enabled = Boolean(cfg.enabled);
     this.config.baseUrl = String(cfg.baseUrl || "").trim().replace(/\/+$/, "");
     if (cfg.tokenStorageKey) {
       this.config.tokenStorageKey = String(cfg.tokenStorageKey);
@@ -16,7 +18,12 @@ const RTXBackendClient = {
   },
 
   isEnabled() {
-    return Boolean(this.config.baseUrl);
+    return Boolean(this.config.enabled || this.config.baseUrl);
+  },
+
+  buildUrl(path) {
+    const cleanPath = String(path || "").startsWith("/") ? String(path || "") : `/${path}`;
+    return `${this.config.baseUrl}${cleanPath}`;
   },
 
   getToken() {
@@ -48,7 +55,7 @@ const RTXBackendClient = {
       options && options.headers ? options.headers : {}
     );
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${this.config.baseUrl}${path}`, Object.assign({}, options || {}, { headers }));
+    const res = await fetch(this.buildUrl(path), Object.assign({}, options || {}, { headers }));
     let body = null;
     try {
       body = await res.json();
@@ -63,9 +70,10 @@ const RTXBackendClient = {
   },
 
   async login(payload) {
+    const currentState = typeof RTXState !== "undefined" && RTXState.user ? RTXState.user : null;
     const body = await this.request("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify(payload || {})
+      body: JSON.stringify(Object.assign({ initialState: currentState }, payload || {}))
     });
     if (body && body.token) {
       this.setToken(String(body.token));
@@ -73,10 +81,25 @@ const RTXBackendClient = {
     return body;
   },
 
+  async getState() {
+    return this.request("/api/me/state", { method: "GET" });
+  },
+
   async saveState(state) {
     return this.request("/api/me/state", {
       method: "PUT",
       body: JSON.stringify({ state })
+    });
+  },
+
+  async getExchangeAds() {
+    return this.request("/api/exchange/ads", { method: "GET" });
+  },
+
+  async trackExchangeAdEvent(payload) {
+    return this.request("/api/exchange/ad-event", {
+      method: "POST",
+      body: JSON.stringify(payload || {})
     });
   },
 
